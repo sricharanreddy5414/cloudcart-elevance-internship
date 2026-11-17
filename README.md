@@ -17,10 +17,11 @@ Reviewed on 17 November 2026 (Asia/Calcutta).
 
 | Item | State |
 | --- | --- |
-| EverShop on Windows | Reported running. Not rechecked from this environment, because those files are not here. |
-| AWS resources for CloudCart | None created. |
+| EverShop on Windows | Reported running. This environment could not reach it. |
+| Local implementation and tests | Present. Run `python scripts/run_validation.py`. |
+| AWS resources for CloudCart | None created. Terraform plan adds nothing until you approve a stack. |
 | AWS spend approved | No. |
-| Tasks 1–6 | Not started. |
+| Tasks 1–6 | Tested locally. Not deployed and not verified in AWS. |
 | Final submission | Not ready. Deadline 17 December 2026. |
 
 A local Docker test, a Terraform plan, or a diagram is not an AWS deployment. Each later result will be marked as one of:
@@ -36,16 +37,15 @@ One step at a time. Each step has an objective, the exact PowerShell command, th
 
 The active step is [docs/planning/next-step.md](docs/planning/next-step.md).
 
-## How to run something locally
-
-There is no application server in this repository yet. Leave the existing Docker Compose project running. Do not run `docker compose down -v`, and do not delete the `postgres-data` volume.
+## How to run the checks
 
 ```powershell
 Set-Location "C:\Users\sri charan reddy\Desktop\Elevance-AWS-Internship"
-docker compose ps
+python -m pip install -r requirements.txt
+python scripts/run_validation.py
 ```
 
-Run that only when the next step asks for it. The first step does not need Docker.
+Leave the existing store running. Do not run `docker compose down -v`, and do not delete the `postgres-data` volume. Do not apply Terraform. Progress is in [docs/PROJECT_PROGRESS.md](docs/PROJECT_PROGRESS.md).
 
 ## Map
 

@@ -9,4 +9,4 @@ EverShop is the store. It is already running through Docker Compose on Windows, 
 | `lambda/` | The thumbnail function and the ClamAV scan function. |
 | `edge-functions/` | Lambda@Edge source for query filtering, cache headers, and WebP conversion. |
 
-No Dockerfile or function source has been added yet. The current step does not change the application.
+The production Dockerfile, the presign service, and the edge functions are in this tree. They do not replace the running Windows Compose project.

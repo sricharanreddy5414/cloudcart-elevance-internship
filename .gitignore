@@ -26,6 +26,10 @@ node_modules/
 dist/
 coverage/
 *.log
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
 
 # OS junk
 Thumbs.db

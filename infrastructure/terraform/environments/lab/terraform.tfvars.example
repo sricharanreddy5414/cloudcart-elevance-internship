@@ -1,0 +1,2 @@
+confirm_paid_deployment    = false
+local_validate_credentials = true

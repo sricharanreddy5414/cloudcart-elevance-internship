@@ -1,0 +1,22 @@
+version: 0.2
+
+phases:
+  pre_build:
+    commands:
+      - echo "Build uses the CodeBuild role. No keys are stored in this file."
+      - aws ecr get-login-password --region "$AWS_DEFAULT_REGION" | docker login --username AWS --password-stdin "$ECR_REGISTRY"
+  build:
+    commands:
+      - docker build --pull -f application/docker/Dockerfile -t "$ECR_REGISTRY/$ECR_REPOSITORY:$CODEBUILD_RESOLVED_SOURCE_VERSION" .
+      - docker image inspect "$ECR_REGISTRY/$ECR_REPOSITORY:$CODEBUILD_RESOLVED_SOURCE_VERSION" --format '{{index .RepoDigests 0}}'
+  post_build:
+    commands:
+      - docker push "$ECR_REGISTRY/$ECR_REPOSITORY:$CODEBUILD_RESOLVED_SOURCE_VERSION"
+      - DIGEST=$(docker image inspect "$ECR_REGISTRY/$ECR_REPOSITORY:$CODEBUILD_RESOLVED_SOURCE_VERSION" --format '{{index .RepoDigests 0}}')
+      - printf '{"ImageURI":"%s"}\n' "$DIGEST" > imageDetail.json
+      - aws ecr start-image-scan --repository-name "$ECR_REPOSITORY" --image-id imageTag="$CODEBUILD_RESOLVED_SOURCE_VERSION" || true
+
+artifacts:
+  files:
+    - imageDetail.json
+    - ci-cd/codedeploy/appspec.yaml

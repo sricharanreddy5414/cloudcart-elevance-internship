@@ -1,0 +1,31 @@
+# Separate MySQL 8 lab for the Task 2 security demonstration.
+# This project name and volume are not the EverShop PostgreSQL volume.
+# Do not attach postgres-data here. Do not change the EverShop compose from this file.
+# require_secure_transport is not enabled on first boot: the official image
+# bootstraps the data directory over a local non-TLS socket. RDS enforces TLS
+# with the parameter group in infrastructure/terraform/task-2-secure-rds.
+
+name: cloudcart-mysql-lab
+
+services:
+  mysql:
+    image: mysql:8.0.40
+    restart: "no"
+    env_file:
+      - ../../../.env
+    ports:
+      - "127.0.0.1:3306:3306"
+    volumes:
+      - cloudcart-mysql-lab:/var/lib/mysql
+    networks:
+      - cloudcart-mysql-lab
+    labels:
+      cloudcart.lab: mysql-security
+
+networks:
+  cloudcart-mysql-lab:
+    name: cloudcart-mysql-lab
+
+volumes:
+  cloudcart-mysql-lab:
+    name: cloudcart-mysql-lab

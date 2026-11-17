@@ -1,0 +1,11 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ConnectAsIamUser",
+      "Effect": "Allow",
+      "Action": ["rds-db:connect"],
+      "Resource": "arn:aws:rds-db:ap-south-1:ACCOUNT:dbuser:DB_RESOURCE_ID/cloudcart_iam"
+    }
+  ]
+}

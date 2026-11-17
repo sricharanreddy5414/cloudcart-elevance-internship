@@ -1,0 +1,10 @@
+.git
+.env
+**/.env
+**/node_modules
+evidence
+**/*.pem
+**/*.key
+**/credentials
+*.tfstate
+*.tfstate.*

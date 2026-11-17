@@ -1,3 +1,7 @@
+# AWS identity check, still required before any apply
+
+Local implementation and tests now exist. Read `docs/PROJECT_PROGRESS.md`. This identity check is still the gate before any AWS create.
+
 # Current step — identify the AWS principal
 
 Status: waiting for you to run this on Windows.  

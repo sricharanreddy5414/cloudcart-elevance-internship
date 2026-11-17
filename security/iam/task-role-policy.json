@@ -1,0 +1,23 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ProductImages",
+      "Effect": "Allow",
+      "Action": ["s3:GetObject", "s3:PutObject"],
+      "Resource": "arn:aws:s3:::cloudcart-product-images-*/*"
+    },
+    {
+      "Sid": "ReadDatabaseSecret",
+      "Effect": "Allow",
+      "Action": ["secretsmanager:GetSecretValue"],
+      "Resource": "arn:aws:secretsmanager:ap-south-1:*:secret:cloudcart/evershop/*"
+    },
+    {
+      "Sid": "ReadConfig",
+      "Effect": "Allow",
+      "Action": ["ssm:GetParameter", "ssm:GetParameters"],
+      "Resource": "arn:aws:ssm:ap-south-1:*:parameter/cloudcart/*"
+    }
+  ]
+}

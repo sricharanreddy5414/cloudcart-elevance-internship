@@ -1,0 +1,31 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "PullImage",
+      "Effect": "Allow",
+      "Action": [
+        "ecr:GetAuthorizationToken",
+        "ecr:BatchCheckLayerAvailability",
+        "ecr:GetDownloadUrlForLayer",
+        "ecr:BatchGetImage"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "WriteLogs",
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+      ],
+      "Resource": "arn:aws:logs:ap-south-1:*:log-group:/cloudcart/*"
+    },
+    {
+      "Sid": "ReadParameters",
+      "Effect": "Allow",
+      "Action": ["ssm:GetParameters"],
+      "Resource": "arn:aws:ssm:ap-south-1:*:parameter/cloudcart/*"
+    }
+  ]
+}

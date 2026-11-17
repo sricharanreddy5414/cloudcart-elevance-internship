@@ -1,0 +1,13 @@
+{
+  "name": "cloudcart",
+  "label": "DOCUMENTED",
+  "stages": [
+    {"name": "Source", "actions": ["Git source revision"]},
+    {"name": "Build", "actions": ["CodeBuild buildspec.yml"]},
+    {"name": "Test", "actions": ["unit and contract tests"]},
+    {"name": "Image", "actions": ["push immutable digest to ECR", "start image scan"]},
+    {"name": "Deploy", "actions": ["CodeDeploy ECS blue/green using appspec.yaml"]},
+    {"name": "HealthCheck", "actions": ["ALB target health and storefront HTTP status"]},
+    {"name": "Verification", "actions": ["shift production traffic or roll back"]}
+  ]
+}

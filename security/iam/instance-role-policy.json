@@ -1,0 +1,30 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "JoinCluster",
+      "Effect": "Allow",
+      "Action": [
+        "ecs:RegisterContainerInstance",
+        "ecs:DeregisterContainerInstance",
+        "ecs:DiscoverPollEndpoint",
+        "ecs:Submit*",
+        "ecs:Poll",
+        "ecs:StartTelemetrySession"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "CompleteWarmupHook",
+      "Effect": "Allow",
+      "Action": ["autoscaling:CompleteLifecycleAction", "autoscaling:RecordLifecycleActionHeartbeat"],
+      "Resource": "arn:aws:autoscaling:ap-south-1:ACCOUNT:autoScalingGroup:*:autoScalingGroupName/cloudcart-ecs"
+    },
+    {
+      "Sid": "DatabaseToken",
+      "Effect": "Allow",
+      "Action": ["rds-db:connect"],
+      "Resource": "arn:aws:rds-db:ap-south-1:ACCOUNT:dbuser:DB_RESOURCE_ID/cloudcart_iam"
+    }
+  ]
+}
