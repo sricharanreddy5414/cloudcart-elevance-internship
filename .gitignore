@@ -1,0 +1,33 @@
+# Secrets and local credentials. Never commit these.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.pfx
+*.p12
+credentials
+credential.json
+*accessKeys*
+.aws/
+
+# Terraform local state and plans
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+tfplan
+crash.log
+override.tf
+override.tf.json
+
+# Build and runtime output
+node_modules/
+dist/
+coverage/
+*.log
+
+# OS junk
+Thumbs.db
+Desktop.ini
+.DS_Store
