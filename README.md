@@ -24,7 +24,7 @@ Reviewed on 17 November 2026 (Asia/Calcutta), after a validation run on Linux.
 | Local implementation and tests | Python and Node tests passed. Six Terraform stacks validated and planned no changes. |
 | Docker in the validation environment | Not installed. The image was not built here. |
 | AWS resources for CloudCart | None created. |
-| AWS spend approved | No. |
+| AWS spend approved | No. The ₹500 target does not cover a month of the required stack. See [the cost plan](docs/reports/phase-0-cost-and-deployment-plan.md). |
 | Tasks 1–6 | Designed, implemented as local code, and not deployed. See [the matrix](docs/reports/six-task-matrix.md). |
 | Final submission | Not ready. Deadline 17 December 2026. |
 
