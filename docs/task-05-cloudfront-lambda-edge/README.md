@@ -1,6 +1,6 @@
 # Task 5 — CloudFront, a private origin, and Lambda@Edge
 
-Status: **Not started.** No distribution, origin access control, or function exists.
+Status: **LOCAL / DOCUMENTED. Not deployed.** Terraform defines Origin Access Control, a private S3 origin, an image cache policy, and a storefront distribution. The Lambda@Edge behavior is the Node functions in `application/edge-functions/`, tested with `node --test`. Those functions are not published and are not attached to the distribution. A cache hit ratio has not been read from CloudFront.
 
 ## Objective
 
@@ -47,4 +47,4 @@ Lambda@Edge has no free tier. A lab's handful of invocations is a small charge a
 
 ## Not done
 
-No distribution and no function. Source code will be added when that step starts, and it will be tested locally before any publish.
+No distribution or function version exists in AWS. The 1 MB origin-response guard is a LOCAL test. Cache-hit ratio remains BLOCKED until CloudFront reports it. Do not treat one request as a hit ratio.

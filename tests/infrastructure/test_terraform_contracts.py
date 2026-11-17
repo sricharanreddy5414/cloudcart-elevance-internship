@@ -61,6 +61,9 @@ class TerraformContractTest(unittest.TestCase):
         self.assertIn('"BLUE_GREEN"', text)
         self.assertIn("IMMUTABLE", text)
         self.assertIn("scan_on_push", text)
+        self.assertIn("aws_codepipeline", text)
+        self.assertIn("codebuild.amazonaws.com", text)
+        self.assertIn("codepipeline.amazonaws.com", text)
 
     def test_task_five_uses_oac_and_a_private_origin(self):
         text = read_stack("task-5-cloudfront-edge")

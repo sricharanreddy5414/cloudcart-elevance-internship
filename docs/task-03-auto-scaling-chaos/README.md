@@ -1,6 +1,6 @@
 # Task 3 — Auto Scaling, mixed instances, and chaos tests
 
-Status: **Not started.** No Auto Scaling group exists.
+Status: **LOCAL / SIMULATED. Not deployed.** The launch template, mixed On-Demand and Spot policy, lifecycle hook, CPU policy, and ALB request-count policy are in Terraform and plan zero resources. The warm-up, zone-loss, and health tests run in `tests/chaos/test_chaos.py`. They are not EC2 terminations and not an Availability Zone power-off.
 
 ## Objective
 
@@ -53,4 +53,4 @@ Every instance hour and every gigabyte of cross-AZ load-test traffic can bill. S
 
 ## Not done
 
-No group, no policy, no load test, no chaos test.
+No Auto Scaling group exists. There is no load generator against a live store and no measured recovery time. Label: SIMULATED, and BLOCKED for REAL_AWS.

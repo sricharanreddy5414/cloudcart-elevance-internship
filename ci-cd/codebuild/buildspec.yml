@@ -14,9 +14,11 @@ phases:
       - docker push "$ECR_REGISTRY/$ECR_REPOSITORY:$CODEBUILD_RESOLVED_SOURCE_VERSION"
       - DIGEST=$(docker image inspect "$ECR_REGISTRY/$ECR_REPOSITORY:$CODEBUILD_RESOLVED_SOURCE_VERSION" --format '{{index .RepoDigests 0}}')
       - printf '{"ImageURI":"%s"}\n' "$DIGEST" > imageDetail.json
+      - cp ci-cd/codedeploy/taskdef.json taskdef.json
       - aws ecr start-image-scan --repository-name "$ECR_REPOSITORY" --image-id imageTag="$CODEBUILD_RESOLVED_SOURCE_VERSION" || true
 
 artifacts:
   files:
     - imageDetail.json
+    - taskdef.json
     - ci-cd/codedeploy/appspec.yaml

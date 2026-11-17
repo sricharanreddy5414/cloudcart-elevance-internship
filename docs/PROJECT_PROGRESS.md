@@ -1,6 +1,6 @@
 # CloudCart progress
 
-Updated: 17 November 2026 (Asia/Calcutta), after the local validation run.
+Updated: 17 November 2026 (Asia/Calcutta), after the validation run that included the CodePipeline resources.
 
 No task is complete. A task is complete only when its AWS evidence exists. None of these stacks has been applied.
 
@@ -9,7 +9,7 @@ No task is complete. A task is complete only when its AWS evidence exists. None 
 | 1 Route 53, ACM, WAF, failover | TESTED_LOCAL | Terraform validates. Plan adds nothing. Failover timing, HSTS, and redirect rules have unit tests. | No domain, no hosted zone, no certificate, no WAF. Live HTTPS and failover are BLOCKED. |
 | 2 MySQL security demonstration | TESTED_LOCAL | Separate from EverShop PostgreSQL. Rotation, IAM-token lifetime, TLS rejection, and the five-minute RPO calculator have unit tests. Terraform validates. | RDS was not created. The RPO calculator is SIMULATED and sets `verified_against_rds` to false. |
 | 3 Auto Scaling and chaos | TESTED_LOCAL | Mixed-capacity model, lifecycle hook, zone removal, health failure, and latency have unit tests. Terraform validates. | No Auto Scaling group. Measured availability is from the model, not from EC2. |
-| 4 ECS, ECR, pipeline | TESTED_LOCAL | Dockerfile is pinned to an image digest. Task-definition rules, blue/green shift, and rollback have unit tests. Terraform validates. | The image was not built here. Docker is not installed in this environment. ECR, ECS, and CodeDeploy were not created. |
+| 4 ECS, ECR, pipeline | TESTED_LOCAL | Dockerfile is pinned to an image digest. Task-definition rules, blue/green shift, and rollback have unit tests. Terraform now includes CodeBuild and CodePipeline roles with the correct service principals. Plan still adds nothing. | The image was not built here. Docker is not installed in this environment. ECR, ECS, CodeBuild, and CodePipeline were not created. |
 | 5 CloudFront and Lambda@Edge | TESTED_LOCAL | Query filtering, cache headers, the 1 MB WebP guard, and short-lived signed URLs pass Node tests. Pillow produced a real WebP thumbnail. Terraform validates. | Functions are not published in us-east-1. Cache hit ratio is not a CloudFront statistic. |
 | 6 S3 product images | TESTED_LOCAL | Presigned URLs, quarantine, bucket policy, and lifecycle configuration are tested. Terraform validates. | No bucket. ClamAV definitions are not in the scanner. S3 Object Lambda was not called. |
 

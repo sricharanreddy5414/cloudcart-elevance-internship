@@ -19,13 +19,13 @@ Status values used below:
 | ID | Task | Status | Blocker |
 | --- | --- | --- | --- |
 | 0 | Account identity, MFA, non-root deployment principal | In progress | Waiting for `aws sts get-caller-identity` from the Windows CLI. |
-| 1 | Route 53, ACM, HTTPS, HSTS, WAF, maintenance failover | Not started | No non-root identity. No domain decision. No spend approval. Hosted zone and WAF have charges. |
-| 2 | Private Multi-AZ database, IAM auth, TLS, rotation, 5-minute RPO | Not started | EverShop supports PostgreSQL only. The brief says MySQL. Mentor decision required. Multi-AZ has a charge. |
-| 3 | Mixed-instance Auto Scaling, lifecycle hooks, chaos tests | Not started | Depends on the ECS/EC2 capacity from Task 4. Instances have a charge. |
-| 4 | ECR, ECS on EC2, ALB, Parameter Store, CodePipeline, blue/green | Not started | ALB, EC2, and the pipeline have charges. Blue/green is not claimed until traffic is switched and rolled back under test. |
-| 5 | Private S3 origin, OAC, Lambda@Edge, cache, signed URLs | Not started | Lambda@Edge has no free tier. WebP at the edge is limited to a 1 MB origin-response. |
-| 6 | Private S3 images, presign, lifecycle, inventory, malware scan | Not started | S3 Object Lambda is closed to new customers as of 7 November 2025. Feasibility check is part of the task. |
-| 7 | Final report, evidence index, 2–5 minute demo | Not started | Blocked until the evidence is real. Submission is one-time. |
+| 1 | Route 53, ACM, HTTPS, HSTS, WAF, maintenance failover | Simulated and tested | No non-root identity. No domain decision. No spend approval. Hosted zone and WAF have charges. |
+| 2 | Private Multi-AZ database, IAM auth, TLS, rotation, 5-minute RPO | Simulated and tested | EverShop supports PostgreSQL only. The brief says MySQL. Mentor decision required. Multi-AZ has a charge. |
+| 3 | Mixed-instance Auto Scaling, lifecycle hooks, chaos tests | Simulated and tested | Depends on the ECS/EC2 capacity from Task 4. Instances have a charge. The chaos test is in-process. |
+| 4 | ECR, ECS on EC2, ALB, Parameter Store, CodePipeline, blue/green | Implemented locally | ALB, EC2, and the pipeline have charges. Blue/green is simulated. Docker did not build the image in the Linux validation environment. |
+| 5 | Private S3 origin, OAC, Lambda@Edge, cache, signed URLs | Simulated and tested | Lambda@Edge has no free tier. The functions are not attached to the distribution. WebP at the edge is limited to a 1 MB origin-response. |
+| 6 | Private S3 images, presign, lifecycle, inventory, malware scan | Simulated and tested | S3 Object Lambda is closed to new customers as of 7 November 2025. The scan matches EICAR only. |
+| 7 | Final report, evidence index, 2–5 minute demo | In progress | The report and index exist. The video does not. Submission is one-time. |
 
 ## Local application
 
@@ -34,5 +34,5 @@ Status values used below:
 | Windows tools installed | Reported complete. Not rechecked here. |
 | EverShop and PostgreSQL containers | Reported healthy, admin login successful. Not rechecked here. |
 | Store settings and product catalog | Not started. |
-| Production Dockerfile | Not started. The development Compose file will be read before any edit. |
+| Production Dockerfile | Present at `application/docker/Dockerfile`. Not built where Docker is missing. |
 | Administrator password rotation | Required. The password appeared in terminal output. |

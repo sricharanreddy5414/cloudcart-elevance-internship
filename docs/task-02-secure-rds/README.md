@@ -1,6 +1,6 @@
 # Task 2 — Private database, IAM authentication, rotation, and recovery
 
-Status: **Not started.** No database has been created in AWS. The local database is PostgreSQL 16 in Docker, on the Windows machine, and it stays there.
+Status: **LOCAL / SIMULATED. Not deployed.** The Terraform stack is a separate MySQL 8 security lab: private subnets, Multi-AZ, `publicly_accessible = false`, IAM authentication, `require_secure_transport`, and a Secrets Manager-managed master password. EverShop stays on PostgreSQL. The local rotation, 15-minute token, TLS rejection, and five-minute RPO checks are simulations. `verified_against_rds` is false. No RDS instance exists.
 
 ## Objective
 
@@ -61,4 +61,4 @@ Multi-AZ bills two instances and is outside the classic free-tier database allow
 
 ## Not done
 
-No VPC, no subnet, no instance, no secret, no restore.
+No VPC, subnet, instance, secret, or restore exists in AWS. The five-minute figure is the RDS log-upload interval used by the calculator. It is not a measured `LatestRestorableTime`. Label: SIMULATED, and BLOCKED for REAL_AWS.

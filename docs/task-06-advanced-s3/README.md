@@ -1,6 +1,6 @@
 # Task 6 — Private product-image storage
 
-Status: **Not started.** No bucket has been created.
+Status: **LOCAL / DOCUMENTED. Object Lambda is not deployed.** Terraform defines a private bucket, bucket-owner enforcement, AES256, public-access blocking, Intelligent-Tiering, Glacier, and weekly inventory. Presigned URLs, EICAR quarantine, and Pillow WebP thumbnails pass local tests. S3 Object Lambda was not called. New customers cannot start using it. The thumbnail path is an ordinary object, not Object Lambda.
 
 ## Objective
 
@@ -46,4 +46,4 @@ Public delivery reuses the Task 5 distribution and Origin Access Control. The bu
 
 ## Not done
 
-No bucket, no function, no scan.
+No bucket, inventory report, or scanner function exists in AWS. `security/malware/handler.py` recognizes the EICAR test string only. It does not include ClamAV definitions. Label the scan LOCAL. Label Object Lambda BLOCKED pending mentor approval of the ordinary-object substitute.

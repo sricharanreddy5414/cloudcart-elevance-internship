@@ -15,7 +15,7 @@ It does not start EverShop, does not delete `postgres-data`, and does not apply 
 
 `scripts/cleanup-local.ps1` may remove containers labelled `cloudcart.lab=mysql-security`. It refuses any argument that names `postgres-data`.
 
-The production image is `application/docker/Dockerfile`. It was not built in the environment that produced the first validation report, because Docker was not installed there. On Windows, build it only when you intend to, and do not remove the existing volume:
+The production image is `application/docker/Dockerfile`. The 17 November 2026 Linux validation did not build it: Docker was not installed, and `http://127.0.0.1:3000/` refused the connection. That result is BLOCKED, not a healthy store. On Windows, build it only when you intend to, and do not remove the existing volume:
 
 ```powershell
 docker build -f application/docker/Dockerfile -t cloudcart-evershop:local .

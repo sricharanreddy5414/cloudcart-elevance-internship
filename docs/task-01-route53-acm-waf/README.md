@@ -1,6 +1,6 @@
 # Task 1 — Route 53, ACM, and WAF
 
-Status: **Not started.** Nothing in Route 53, ACM, or WAF has been created.
+Status: **LOCAL / DOCUMENTED. Not deployed.** Terraform for the hosted zone, both ACM certificates, HSTS, the maintenance distribution, failover records, and both WAF web ACLs validates and plans zero resources while `confirm_paid_deployment` is false. No hosted zone, certificate, or web ACL exists. A registered domain and DNS validation are still required before any of this can be issued.
 
 ## Objective
 
@@ -45,6 +45,10 @@ Shoppers resolve the domain in Route 53. The primary answer is the storefront Cl
 
 The zone is the control point for the domain. Certificate validation records and the registrar settings stay with the account owner. WAF is attached before the distribution is used for anything beyond a test. Security group and WAF changes have a rollback: disassociate the web ACL, or revert the record to the previous alias.
 
+## Domain and DNS validation
+
+A public hosted zone does not register a domain. Buy or transfer the domain at a registrar, then set the registrar's name servers to the four Route 53 name servers after the zone exists. Both certificates use DNS validation records in that zone. ACM will not issue a certificate until those records resolve. CloudFront can attach only an `ISSUED` certificate from `us-east-1`. The ALB certificate must be in `ap-south-1`.
+
 ## Not done
 
-No zone, no certificate, no distribution, no web ACL, no test.
+No zone, certificate, distribution, or web ACL has been created. Failover timing has a local test only. It is not a live DNS cutover. Label: BLOCKED for REAL_AWS.

@@ -30,6 +30,8 @@ EDGE_TESTS = [
 
 
 def run(command: list[str], cwd: Path | None = None) -> dict:
+    shown = " ".join(command)
+    print(f"RUN {shown}", flush=True)
     completed = subprocess.run(
         command,
         cwd=cwd or ROOT,
@@ -37,6 +39,7 @@ def run(command: list[str], cwd: Path | None = None) -> dict:
         capture_output=True,
         check=False,
     )
+    print(f"EXIT {completed.returncode} {shown}", flush=True)
     return {
         "command": command,
         "cwd": str(cwd or ROOT),
