@@ -83,6 +83,47 @@ class ClusterSim:
         self.instances[instance_id].healthy = False
         self.events.append({"event": "health_failed", "id": instance_id})
 
+    def interrupt_spot(self, instance_id: str) -> str:
+        instance = self.instances[instance_id]
+        if instance.purchase != "spot":
+            raise ValueError("only a Spot instance receives an interruption notice")
+        if instance.state != "in_service":
+            raise RuntimeError("a Spot notice applies to an in-service instance")
+        instance.state = "draining"
+        instance.healthy = False
+        self.events.append({"event": "spot_interruption", "id": instance.id, "az": instance.az})
+        return "draining"
+
+    def expire_launch(self, instance_id: str, waited_seconds: int, timeout: int = 600) -> str:
+        instance = self.instances[instance_id]
+        if instance.state != "pending_wait":
+            raise RuntimeError("a launch timeout applies only while the instance is pending")
+        if waited_seconds < timeout:
+            return "PENDING"
+        instance.state = "terminated"
+        instance.healthy = False
+        self.events.append({"event": "hook_timeout", "id": instance.id, "result": "ABANDON"})
+        return "ABANDON"
+
+    def scale_in(self, minimum: int) -> str | None:
+        serving = self.serving()
+        if len(serving) <= minimum:
+            self.events.append({"event": "scale_in_refused", "reason": "minimum"})
+            return None
+        spots = [item for item in serving if item.purchase == "spot"]
+        on_demand = [item for item in serving if item.purchase == "on-demand"]
+        if spots:
+            victim = spots[0]
+        elif len(on_demand) <= 1:
+            self.events.append({"event": "scale_in_refused", "reason": "on_demand_base"})
+            return None
+        else:
+            victim = on_demand[0]
+        victim.state = "draining"
+        victim.healthy = False
+        self.events.append({"event": "scale_in_drain", "id": victim.id, "purchase": victim.purchase})
+        return victim.id
+
     def availability(self) -> float | None:
         if not self.requests:
             return None
@@ -95,6 +136,18 @@ def scaling_decision(cpu_percent: float, requests_per_target: float, cpu_target:
     if cpu_percent <= cpu_target * 0.5 and requests_per_target <= request_target * 0.5:
         return "scale_in"
     return "hold"
+
+
+def next_desired(current: int, decision: str, minimum: int, maximum: int) -> int:
+    if minimum > maximum:
+        raise ValueError("minimum cannot exceed maximum")
+    if decision == "scale_out":
+        return min(maximum, current + 1)
+    if decision == "scale_in":
+        return max(minimum, current - 1)
+    if decision != "hold":
+        raise ValueError("decision must be scale_out, scale_in, or hold")
+    return min(maximum, max(minimum, current))
 
 
 def mixed_capacity(desired: int, on_demand_base: int = 1) -> dict:

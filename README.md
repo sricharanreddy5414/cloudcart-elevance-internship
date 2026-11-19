@@ -35,7 +35,7 @@ Do not copy this repository over the original store folder, and do not delete `p
 | --- | --- | --- | --- |
 | 1 | Domain, Route 53, ACM, WAF, failover | [Terraform and notes](docs/task-01-route53-acm-waf/README.md) | No |
 | 2 | Private Multi-AZ MySQL, IAM auth, rotation, recovery | [Separate from the store database](docs/task-02-secure-rds/README.md) | No |
-| 3 | Mixed Spot and On-Demand, scaling, failure tests | [Model, not EC2](docs/task-03-auto-scaling-chaos/README.md) | No |
+| 3 | Mixed Spot and On-Demand, scaling, failure tests | [Model, not EC2](docs/task-03-autoscaling/README.md) | No |
 | 4 | EverShop on ECS, ECR, CodePipeline, blue/green | [Image file, not a built image](docs/task-04-ecs-ecr-cicd/README.md) | No |
 | 5 | Private S3 origin, CloudFront, Lambda@Edge | [Source, not a published function](docs/task-05-cloudfront-lambda-edge/README.md) | No |
 | 6 | Private images, lifecycle, inventory, scanning | [EICAR check, not ClamAV](docs/task-06-advanced-s3/README.md) | No |

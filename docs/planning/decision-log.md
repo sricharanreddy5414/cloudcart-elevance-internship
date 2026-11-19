@@ -51,7 +51,7 @@ Decisions are proposals until they are accepted. Nothing here has been deployed.
 
 ## D-008 — Migrations before target registration
 
-- Status: proposed design, not built.
+- Status: implemented in the Task 3 hook and user data. Not deployed.
 - The brief requires warm-up and database migration activity before an instance registers with the load balancer target group.
 - Running schema migrations from every new instance at once can corrupt a database.
 - Intended design: the pipeline runs migration once under a database lock. The Auto Scaling lifecycle hook holds the new instance and continues only after the schema version matches the image and the local process is warm. Then the instance may receive tasks and target-group registration.

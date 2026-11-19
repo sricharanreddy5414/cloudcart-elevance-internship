@@ -110,6 +110,40 @@ class TerraformContractTest(unittest.TestCase):
         self.assertIn("finish ABANDON", userdata)
         self.assertIn("finish CONTINUE", userdata)
         self.assertLess(userdata.index("finish CONTINUE"), userdata.index("systemctl start ecs"))
+        self.assertIn("ECS_ENABLE_SPOT_INSTANCE_DRAINING=true", userdata)
+        self.assertIn("autoscaling:EC2_INSTANCE_TERMINATING", text)
+        self.assertIn("capacity_rebalance", text)
+        self.assertIn("capacity-optimized", text)
+        self.assertRegex(text, r'http_tokens\s*=\s*"required"')
+        self.assertRegex(text, r"http_put_response_hop_limit\s*=\s*1")
+        self.assertRegex(text, r"encrypted\s*=\s*true")
+        self.assertIn("t3.small", text)
+        self.assertNotIn("t3.micro", text)
+        self.assertNotIn("t4g.", text)
+        self.assertIn("desired_capacity must sit between min_size and max_size", text)
+        self.assertIn("AmazonEC2ContainerServiceforEC2Role", text)
+        self.assertIn("ssm:GetParameter", text)
+        self.assertIn("autoscaling:CompleteLifecycleAction", text)
+        self.assertIn("schema_version", text)
+        self.assertNotIn("0.0.0.0/0", text)
+        self.assertNotRegex(text, r"from_port\s*=\s*22")
+        self.assertNotIn("secret_string", text)
+        self.assertRegex(text, r'health_check_type\s*=\s*"EC2"')
+
+    def test_task_three_rejects_desired_above_maximum(self):
+        binary = shutil.which("terraform") or str(Path.home() / ".local" / "bin" / "terraform")
+        if not Path(binary).exists():
+            self.skipTest("terraform is not installed")
+        result = subprocess.run(
+            [binary, "plan", "-input=false", "-lock=false", "-var=desired_capacity=9"],
+            cwd=TF / "task-3-autoscaling",
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        combined = result.stdout + result.stderr
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("desired_capacity", combined)
 
     def test_task_four_is_ecs_on_ec2_with_code_deploy(self):
         text = read_stack("task-4-ecs-ecr")
