@@ -3,6 +3,9 @@
 const HSTS = "max-age=300; includeSubDomains";
 
 function cacheControlFor(uri) {
+  if (/^\/public\/products\/[a-z0-9][a-z0-9-]{0,63}\/[a-z0-9][a-z0-9._-]{0,63}\/[a-z0-9][a-z0-9._-]{0,80}\.(png|jpe?g|webp)$/i.test(uri || "")) {
+    return "public, max-age=31536000, immutable";
+  }
   if (/\.(png|jpe?g|webp|gif)$/i.test(uri || "")) {
     return "public, max-age=86400, s-maxage=604800";
   }

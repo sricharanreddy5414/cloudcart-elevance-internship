@@ -1,0 +1,20 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "EdgeLogs",
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogGroup",
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+      ],
+      "Resource": [
+        "arn:aws:logs:*:*:log-group:/aws/lambda/us-east-1.cloudcart-image-request",
+        "arn:aws:logs:*:*:log-group:/aws/lambda/us-east-1.cloudcart-image-request:*",
+        "arn:aws:logs:*:*:log-group:/aws/lambda/us-east-1.cloudcart-image-cache",
+        "arn:aws:logs:*:*:log-group:/aws/lambda/us-east-1.cloudcart-image-cache:*"
+      ]
+    }
+  ]
+}

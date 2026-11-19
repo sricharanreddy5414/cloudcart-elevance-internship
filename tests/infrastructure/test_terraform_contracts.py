@@ -202,6 +202,29 @@ class TerraformContractTest(unittest.TestCase):
         self.assertIn("origin_access_control_id", text)
         self.assertIn("image_viewer_request_qualified_arn", text)
         self.assertNotIn("public-read", text)
+        self.assertIn('query_string_behavior = "none"', text)
+        self.assertIn("edgelambda.amazonaws.com", text)
+        self.assertIn("viewer-request", text)
+        self.assertIn("PriceClass_200", text)
+        self.assertIn("^images[.]", text)
+        self.assertNotIn("Authorization", text)
+        self.assertNotIn("secretsmanager", text)
+        self.assertNotIn('target_origin_id       = "alb"', text)
+
+    def test_task_five_rejects_an_apex_alias(self):
+        binary = shutil.which("terraform") or str(Path.home() / ".local" / "bin" / "terraform")
+        if not Path(binary).exists():
+            self.skipTest("terraform is not installed")
+        result = subprocess.run(
+            [binary, "plan", "-input=false", "-lock=false", "-var=image_aliases=[\"example.invalid\"]"],
+            cwd=TF / "task-5-cloudfront-edge",
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        combined = result.stdout + result.stderr
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("image_aliases", combined)
 
     def test_task_six_locks_the_bucket(self):
         text = read_stack("task-6-s3-storage")

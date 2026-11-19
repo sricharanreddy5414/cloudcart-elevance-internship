@@ -42,9 +42,9 @@ The image was not built here. Docker was missing. The artifact bucket name is no
 
 ## Task 5
 
-The distribution uses Origin Access Control and does not grant public-read. Image cache keys allow only `w`, `h`, `format`, and `q`. The Node functions filter other query parameters, set cache headers, refuse a WebP body over 1 MB, and reject a signed URL after expiry.
+The image distribution is separate from the apex. Origin Access Control does not grant public-read. The cache key is the object path. The viewer-request function rejects traversal and origin overrides, then rewrites a valid path to `public/products/...`. Transform parameters are checked and removed because no encoder is packaged. A WebP body over 1 MB is still refused by the local planner, and that planner is not associated.
 
-Those functions are not published in `us-east-1` and are not associated with the distribution. A cache-hit ratio has not been read from CloudFront. One local request is not a hit ratio.
+The functions are not published in `us-east-1`. A cache-hit ratio has not been read from CloudFront. One local request is not a hit ratio.
 
 ## Task 6
 

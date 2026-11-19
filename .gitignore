@@ -13,6 +13,7 @@ credential.json
 
 # Terraform local state and plans
 .terraform/
+.build/
 *.tfstate
 *.tfstate.*
 *.tfplan

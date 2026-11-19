@@ -38,6 +38,17 @@ class PolicyTest(unittest.TestCase):
         self.assertNotIn("*", statement["Resource"])
         self.assertTrue(statement["Resource"].endswith("/cloudcart_iam"))
 
+    def test_image_edge_role_only_writes_its_own_log_groups(self):
+        policy = json.loads((ROOT / "security" / "iam" / "image-edge-role-policy.json").read_text(encoding="utf-8"))
+        actions = {action for item in policy["Statement"] for action in item["Action"]}
+        self.assertEqual(actions, {"logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"})
+        for item in policy["Statement"]:
+            resources = item["Resource"] if isinstance(item["Resource"], list) else [item["Resource"]]
+            self.assertNotIn("*", resources)
+            for resource in resources:
+                self.assertIn(":log-group:/aws/lambda/us-east-1.cloudcart-image-", resource)
+                self.assertNotIn("secret", resource)
+
     def test_repository_scan_finds_no_access_keys(self):
         self.assertEqual(scan_tree(ROOT), [])
 
