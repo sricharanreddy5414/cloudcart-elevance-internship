@@ -8,7 +8,7 @@ Command:
 python3 scripts/run_validation.py
 ```
 
-The runner prints `RUN` before each command and `EXIT` with the code after it. The run at 2026-11-17T13:30:28Z (7:00 PM IST) is recorded in `evidence/test-results/validation-report.md`. Overall status: PASS_WITH_BLOCKERS.
+The runner prints `RUN` before each command and `EXIT` with the code after it. The Phase 1 re-run at 2026-11-19T17:20:09Z (10:50 PM IST) is recorded in `evidence/test-results/validation-report.md`. Overall status: PASS_WITH_BLOCKERS. Python reported 31 tests. Node reported 8 passes. Docker and port 3000 were blocked. Terraform 1.9.8 was used because 1.17 was not installed in this environment.
 
 | Check | Result | Kind |
 | --- | --- | --- |

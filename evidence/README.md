@@ -1,6 +1,8 @@
 # Evidence index
 
-Updated 17 November 2026 (Asia/Calcutta). Nothing in this directory is a live AWS console capture.
+Updated 19 November 2026 (Asia/Calcutta). Nothing in this directory is a live AWS console capture.
+
+The folders `task-1-route53-acm-waf/` through `task-6-s3-image-storage/`, plus `website-hosting/` and `final-validation/`, contain empty templates. Their README files say no AWS evidence has been collected.
 
 | Path | What it is | Label |
 | --- | --- | --- |

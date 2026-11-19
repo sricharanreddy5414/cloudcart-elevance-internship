@@ -1,10 +1,10 @@
 # Known blockers
 
-Updated 17 November 2026 (Asia/Calcutta). These items were not bypassed.
+Updated 19 November 2026 (Asia/Calcutta). These items were not bypassed.
 
 | Blocker | Why it stops the work | Label |
 | --- | --- | --- |
-| ₹500 monthly target | The six-task stack is about ₹12,000 per month with GST if left running, and about ₹100 for six hours only if every billable object is deleted. No phase is approved. See `docs/reports/phase-0-cost-and-deployment-plan.md`. | BLOCKED |
+| ₹0 target | WAF, Multi-AZ RDS, ALB, public IPv4, Route 53 zones, Secrets Manager, and a domain registration are paid. A month of the required stack is about ₹12,000 with GST. No apply is approved. See `docs/reports/zero-cost-strategy.md`. | BLOCKED |
 | AWS caller is not identified in this environment | The AWS CLI is not installed here. A previous note said the Windows CLI had used root. Root must not be used. | BLOCKED |
 | No registered domain | ACM DNS validation cannot finish, and Route 53 failover has no public name to cut over. | BLOCKED |
 | Docker is absent in the validation environment | The image was not built and EverShop was not started here. `http://127.0.0.1:3000/` refused the connection. The Windows store was not modified. | BLOCKED |

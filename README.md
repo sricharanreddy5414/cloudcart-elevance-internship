@@ -1,6 +1,19 @@
 # CloudCart
 
-CloudCart is the integrated e-commerce project for the Elevance Skills Cloud Technology internship. EverShop is the store application. Six AWS tasks share one architecture: DNS and edge security, a private database, auto scaling, immutable container delivery, CloudFront, and private product-image storage.
+EverShop store for the Elevance Skills Cloud Technology internship. Six AWS tasks are designed in this repository. None of them has been deployed. Local tests are not AWS evidence.
+
+| | |
+| --- | --- |
+| Repository | https://github.com/sricharanreddy5414/cloudcart-elevance-internship |
+| Deadline | 17 December 2026 |
+| Store database | PostgreSQL. Do not point EverShop at MySQL. |
+| Task 2 | Separate MySQL security lab. Not deployed. |
+| Budget target | ₹0. Paid resources stay gated until an explicit approval. |
+| Status | CODE READY and LOCALLY VALIDATED where noted. No task is AWS DEPLOYED. |
+
+An evaluator can read [the matrix](docs/reports/six-task-matrix.md) and [the evidence index](evidence/README.md). The cost of a real deployment is in [the zero-cost review](docs/reports/zero-cost-strategy.md).
+
+CloudCart is the integrated e-commerce project. EverShop is the store application. The six tasks cover DNS and edge security, a private database, auto scaling, immutable container delivery, CloudFront, and private product-image storage.
 
 The public project repository is [sricharanreddy5414/cloudcart-elevance-internship](https://github.com/sricharanreddy5414/cloudcart-elevance-internship).
 
@@ -16,7 +29,7 @@ Do not copy this repository over the original store folder, and do not delete `p
 
 ## Current truth
 
-Reviewed on 17 November 2026 (Asia/Calcutta), after a validation run on Linux.
+Reviewed on 19 November 2026 (Asia/Calcutta). The 17 November plan results are historical until the Phase 1 re-run recorded in `evidence/test-results/`.
 
 | Item | State |
 | --- | --- |
@@ -24,7 +37,7 @@ Reviewed on 17 November 2026 (Asia/Calcutta), after a validation run on Linux.
 | Local implementation and tests | Python and Node tests passed. Six Terraform stacks validated and planned no changes. |
 | Docker in the validation environment | Not installed. The image was not built here. |
 | AWS resources for CloudCart | None created. |
-| AWS spend approved | No. The ₹500 target does not cover a month of the required stack. See [the cost plan](docs/reports/phase-0-cost-and-deployment-plan.md). |
+| AWS spend approved | No. The target is ₹0. A month of the required stack is about ₹12,000 with GST. See [the zero-cost review](docs/reports/zero-cost-strategy.md). |
 | Tasks 1–6 | Designed, implemented as local code, and not deployed. See [the matrix](docs/reports/six-task-matrix.md). |
 | Final submission | Not ready. Deadline 17 December 2026. |
 
@@ -66,4 +79,6 @@ Leave the existing store running. Do not run `docker compose down -v`, and do no
 - [Service availability](docs/limitations/aws-service-availability.md)
 - [Known blockers](docs/limitations/known-blockers.md)
 - [Evidence index](evidence/README.md)
+- [Zero-cost review](docs/reports/zero-cost-strategy.md)
+- [Viva preparation](docs/final-report/viva-preparation.md)
 - [Submission checklist](docs/final-report/submission-checklist.md)
