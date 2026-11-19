@@ -50,4 +50,16 @@ function verifyUrl(url, publicKeyPem, nowEpoch) {
   return { signatureOk, expired, acceptable: signatureOk && !expired };
 }
 
-module.exports = { MAX_TTL_SECONDS, signUrl, verifyUrl };
+function handler() {
+  return {
+    status: "500",
+    statusDescription: "Signer Must Not Run At Edge",
+    headers: {
+      "cache-control": [{ key: "Cache-Control", value: "no-store" }],
+      "content-type": [{ key: "Content-Type", value: "text/plain" }],
+    },
+    body: "CloudFront key groups validate signed URLs. This module stays off the edge.",
+  };
+}
+
+module.exports = { MAX_TTL_SECONDS, signUrl, verifyUrl, handler };

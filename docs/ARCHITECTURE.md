@@ -75,7 +75,7 @@ The local model of that shift is tested. CodeDeploy itself has not run.
 
 1. The API returns a presigned PUT that expires in 120 seconds. The signature is created locally in tests.
 2. The object lands in `incoming/`.
-3. The scanner classifies it. The EICAR test string goes to `quarantine/` and is not published. A clean image is copied to `public/` and a WebP thumbnail is written.
+3. The scanner classifies it. The EICAR test string goes to `quarantine/`. An EICAR miss goes to `holding/` and is not published. A WebP thumbnail is written beside that holding object. Only a verdict of `approved` may enter `public/`, and this scanner never emits that verdict.
 4. CloudFront reads `public/` with Origin Access Control.
 5. Lambda@Edge may convert a small image to WebP. A body at or above 1 MB is left unchanged because origin-response cannot return a larger generated body.
 

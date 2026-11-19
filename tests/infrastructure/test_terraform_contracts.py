@@ -44,6 +44,11 @@ class TerraformContractTest(unittest.TestCase):
         self.assertIn("require_secure_transport", text)
         self.assertIn("manage_master_user_password", text)
         self.assertIn("MARIADB_AUDIT_PLUGIN", text)
+        self.assertIn("com.amazonaws.ap-south-1.sts", text)
+        self.assertIn("private_dns_enabled", text)
+        self.assertIn("sts:GetCallerIdentity", text)
+        self.assertNotIn("aws_nat_gateway", text)
+        self.assertNotIn("aws_instance", text)
         self.assertNotIn("postgres-data", text.replace("does not attach to postgres-data", ""))
 
     def test_task_three_mixes_purchases_and_holds_the_hook(self):
@@ -53,6 +58,11 @@ class TerraformContractTest(unittest.TestCase):
         self.assertIn("ALBRequestCountPerTarget", text)
         self.assertIn("autoscaling:EC2_INSTANCE_LAUNCHING", text)
         self.assertIn("ABANDON", text)
+        userdata = (TF / "task-3-autoscaling" / "userdata.sh").read_text(encoding="utf-8")
+        self.assertIn("record-lifecycle-action-heartbeat", userdata)
+        self.assertIn("finish ABANDON", userdata)
+        self.assertIn("finish CONTINUE", userdata)
+        self.assertLess(userdata.index("finish CONTINUE"), userdata.index("systemctl start ecs"))
 
     def test_task_four_is_ecs_on_ec2_with_code_deploy(self):
         text = read_stack("task-4-ecs-ecr")
@@ -64,11 +74,17 @@ class TerraformContractTest(unittest.TestCase):
         self.assertIn("aws_codepipeline", text)
         self.assertIn("codebuild.amazonaws.com", text)
         self.assertIn("codepipeline.amazonaws.com", text)
+        self.assertNotIn("cloudcart-pipeline-artifacts-000000000000", text)
+        self.assertIn("artifact_bucket_name", text)
+        self.assertIn("aws_s3_bucket_versioning", text)
+        self.assertIn("referenced_security_group_id", text)
+        self.assertIn("cloudcart-tasks", text)
 
     def test_task_five_uses_oac_and_a_private_origin(self):
         text = read_stack("task-5-cloudfront-edge")
         self.assertIn("aws_cloudfront_origin_access_control", text)
         self.assertIn("origin_access_control_id", text)
+        self.assertIn("image_viewer_request_qualified_arn", text)
         self.assertNotIn("public-read", text)
 
     def test_task_six_locks_the_bucket(self):

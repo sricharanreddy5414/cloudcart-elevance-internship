@@ -44,6 +44,17 @@ variable "certificate_arn" {
   default     = ""
 }
 
+variable "image_viewer_request_qualified_arn" {
+  type        = string
+  default     = ""
+  description = "Published Lambda@Edge version ARN for the image viewer-request function. Empty attaches nothing. $LATEST is rejected."
+
+  validation {
+    condition     = var.image_viewer_request_qualified_arn == "" || can(regex("^arn:aws:lambda:us-east-1:[0-9]{12}:function:[A-Za-z0-9-_]+:[0-9]+$", var.image_viewer_request_qualified_arn))
+    error_message = "Lambda@Edge needs a us-east-1 function version ARN. Do not use $LATEST or another region."
+  }
+}
+
 module "guard" {
   source                  = "../modules/guard"
   confirm_paid_deployment = var.confirm_paid_deployment

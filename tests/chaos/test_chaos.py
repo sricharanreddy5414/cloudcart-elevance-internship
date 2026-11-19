@@ -6,13 +6,17 @@ from cloudcart.scaling import ClusterSim, mixed_capacity, scaling_decision
 class ChaosModelTest(unittest.TestCase):
     def test_instance_is_not_registered_before_warmup_and_schema_match(self):
         cluster = ClusterSim()
-        instance = cluster.launch("ap-south-1a", "on-demand")
+        blocked = cluster.launch("ap-south-1a", "on-demand")
         self.assertFalse(cluster.request())
-        self.assertFalse(cluster.complete_hook(instance.id))
-        instance.schema_ok = True
-        self.assertFalse(cluster.complete_hook(instance.id))
-        instance.warm = True
-        self.assertTrue(cluster.complete_hook(instance.id))
+        self.assertEqual(cluster.resolve_launch(blocked.id), "ABANDON")
+        self.assertEqual(blocked.state, "terminated")
+        schema_only = cluster.launch("ap-south-1a", "on-demand")
+        schema_only.schema_ok = True
+        self.assertEqual(cluster.resolve_launch(schema_only.id), "ABANDON")
+        ready = cluster.launch("ap-south-1a", "on-demand")
+        ready.schema_ok = True
+        ready.warm = True
+        self.assertEqual(cluster.resolve_launch(ready.id), "CONTINUE")
         self.assertTrue(cluster.request())
 
     def test_zone_loss_keeps_the_other_zone_and_total_loss_does_not(self):

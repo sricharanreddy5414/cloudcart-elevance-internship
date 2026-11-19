@@ -35,10 +35,14 @@ class Handler(BaseHTTPRequestHandler):
         if not bucket or not key or key.startswith("/") or ".." in key.split("/"):
             self._send(400, {"error": "invalid object key"})
             return
-        if self.path.endswith("upload"):
-            url = presign("put_object", bucket, key, content_type=body.get("content_type", "application/octet-stream"))
-        else:
-            url = presign("get_object", bucket, key)
+        try:
+            if self.path.endswith("upload"):
+                url = presign("put_object", bucket, key, content_type=body.get("content_type", "application/octet-stream"))
+            else:
+                url = presign("get_object", bucket, key)
+        except ValueError as exc:
+            self._send(400, {"error": str(exc)})
+            return
         self._send(200, {"url": url, "expires_in": 120, "label": "LOCAL"})
 
     def log_message(self, fmt, *args):

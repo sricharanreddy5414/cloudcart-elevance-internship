@@ -31,6 +31,17 @@ variable "confirm_paid_deployment" {
 variable "bucket_name" {
   type    = string
   default = "cloudcart-product-images-example"
+
+  validation {
+    condition     = can(regex("^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$", var.bucket_name)) && !strcontains(var.bucket_name, "000000000000")
+    error_message = "Bucket name must be a valid S3 name and must not contain a zero account id."
+  }
+}
+
+variable "cloudfront_distribution_arn" {
+  type        = string
+  default     = ""
+  description = "Distribution allowed to read public/*. Empty is rejected when the paid gate creates the bucket policy."
 }
 
 module "guard" {

@@ -46,8 +46,15 @@ resource "aws_s3_bucket_policy" "images" {
   bucket = aws_s3_bucket.images[0].id
   policy = templatefile("${path.module}/../../../security/policies/product-images-bucket-policy.json", {
     bucket_arn       = aws_s3_bucket.images[0].arn
-    distribution_arn = "arn:aws:cloudfront::000000000000:distribution/NOT_DEPLOYED"
+    distribution_arn = var.cloudfront_distribution_arn
   })
+
+  lifecycle {
+    precondition {
+      condition     = can(regex("^arn:aws:cloudfront::[0-9]{12}:distribution/[A-Z0-9]+$", var.cloudfront_distribution_arn)) && !strcontains(var.cloudfront_distribution_arn, "000000000000")
+      error_message = "An approved apply needs the real CloudFront distribution ARN. A zero account id or NOT_DEPLOYED value is rejected."
+    }
+  }
 }
 
 resource "aws_s3_bucket_lifecycle_configuration" "images" {

@@ -15,7 +15,7 @@ Shopper sessions, the EverShop PostgreSQL data, the separate MySQL security-lab 
 | Store to PostgreSQL | EverShop uses the existing PostgreSQL service. The password stays in an untracked `.env`. | Local store was not reachable from the validation environment |
 | Application to MySQL lab | Private subnets, no public address, security group on 3306, `require_secure_transport`, IAM token or a rotated password. | No |
 | Pipeline to production | CodeBuild and CodePipeline use their own roles. The ECS execution role is not reused for the build. Image tags are immutable. | No |
-| Uploads | Presigned PUT expires. EICAR payloads are classified as infected and sent to `quarantine/`. | LOCAL test only |
+| Uploads | Presigned PUT expires and is limited to `incoming/`. EICAR payloads go to `quarantine/`. An EICAR miss stays in `holding/` and is not public. | LOCAL test only. Not ClamAV. |
 
 ## Threats considered
 

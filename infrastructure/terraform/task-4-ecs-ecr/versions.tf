@@ -10,7 +10,7 @@ terraform {
 }
 
 provider "aws" {
-  region                      = "ap-south-1"
+  region                      = var.aws_region
   access_key                  = var.local_validate_credentials ? "localvalidateonlykey" : null
   secret_key                  = var.local_validate_credentials ? "local-validate-only" : null
   skip_credentials_validation = true
@@ -26,6 +26,55 @@ variable "local_validate_credentials" {
 variable "confirm_paid_deployment" {
   type    = bool
   default = false
+}
+
+variable "aws_region" {
+  type    = string
+  default = "ap-south-1"
+
+  validation {
+    condition     = can(regex("^[a-z]{2}-[a-z]+-[0-9]$", var.aws_region))
+    error_message = "Region must look like ap-south-1."
+  }
+}
+
+variable "artifact_bucket_name" {
+  type        = string
+  default     = null
+  description = "Globally unique pipeline artifact bucket. Null uses cloudcart-pipeline plus the caller account id and region when local_validate_credentials is false. No account id is hardcoded."
+
+  validation {
+    condition = (
+      var.artifact_bucket_name == null && !strcontains(coalesce(var.artifact_bucket_name, "cloudcart-pipeline"), "000000000000")
+      ) || (
+      can(regex("^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$", coalesce(var.artifact_bucket_name, "cloudcart")))
+      && !strcontains(coalesce(var.artifact_bucket_name, "cloudcart"), "000000000000")
+      && !can(regex("^[0-9]{1,3}(\\.[0-9]{1,3}){3}$", coalesce(var.artifact_bucket_name, "cloudcart")))
+    )
+    error_message = "Bucket name must be a valid S3 name and must not be the retired zero-account placeholder or an IP address."
+  }
+}
+
+variable "vpc_cidr" {
+  type        = string
+  default     = ""
+  description = "VPC CIDR. When set, task DNS egress is the Amazon resolver at that CIDR base plus two. Empty keeps DNS egress at 0.0.0.0/0 rather than guessing a private range."
+
+  validation {
+    condition     = var.vpc_cidr == "" || can(cidrhost(var.vpc_cidr, 2))
+    error_message = "vpc_cidr must be empty or a valid IPv4 CIDR."
+  }
+}
+
+variable "database_security_group_id" {
+  type        = string
+  default     = ""
+  description = "EverShop PostgreSQL security group. Empty omits the 5432 egress rule instead of opening that port to the internet."
+
+  validation {
+    condition     = var.database_security_group_id == "" || can(regex("^sg-[0-9a-f]{8,17}$", var.database_security_group_id))
+    error_message = "database_security_group_id must be empty or an sg- id."
+  }
 }
 
 variable "vpc_id" {

@@ -21,7 +21,7 @@ The runner prints `RUN` before each command and `EXIT` with the code after it. T
 What the passing tests cover:
 
 - Presigned URL host is local and the URL expires.
-- EICAR content is quarantined. A clean object is not.
+- EICAR content is quarantined. An EICAR miss stays in `holding/` and is not published. Missing scan bytes fail closed.
 - Pillow writes a WebP thumbnail.
 - Query allow-list, cache headers, the 1 MB WebP guard, and signed-URL expiry.
 - IAM token lifetime, password rotation, TLS rejection, and the RPO calculator with `verified_against_rds` false.

@@ -32,7 +32,9 @@ Public delivery reuses the Task 5 distribution and Origin Access Control. The bu
 
 **Inventory.** A second private bucket receives the inventory report. The report is an object listing, not a backup.
 
-**Malware scan.** S3 event notification starts a Lambda function packaged as a container image, because the ClamAV signature database does not fit a small zip file. The function scans the object and writes a tag or moves it. Objects in the incoming prefix are not readable by CloudFront. Clean objects are copied to the public image prefix. The EICAR test string is the infected sample. A normal small image is the clean sample. Signature updates are part of the function's operational note, because a stale database misses current malware.
+**Malware scan.** What exists is an EICAR test-string match. It is not signature scanning and it is not ClamAV. A miss is `eicar-negative`, which has false negatives for every other payload, including real malware, and false positives only for the EICAR string itself. The handler fails closed: a missing object body is `not-scanned`, an EICAR match goes to `quarantine/`, and every other object goes to `holding/`. `public` is never set. Promotion to `public/` requires a verdict of `approved`, which this code cannot emit. CloudFront is allowed to read only `public/*`.
+
+ClamAV was not added. The definition database is large, the function would need a container image, roughly 1.5 GB to 3 GB of memory, and a cold start long enough to load signatures. A 5 MB object cap is enforced here. Lambda's own timeout ceiling is 15 minutes. A scanner error must not publish the object. None of that runtime has been deployed.
 
 ## Evidence to collect later
 

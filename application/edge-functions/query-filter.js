@@ -1,6 +1,7 @@
 "use strict";
 
 const ALLOWED = new Set(["w", "h", "format", "q"]);
+const SIGNED = new Set(["Expires", "Signature", "Key-Pair-Id", "Policy"]);
 const MALICIOUS = [
   /<\s*script/i,
   /union\s+select/i,
@@ -10,6 +11,14 @@ const MALICIOUS = [
   /%00/i,
   /\b(drop|delete|insert|update)\b/i,
 ];
+
+function safeDecode(value) {
+  try {
+    return decodeURIComponent(value);
+  } catch (error) {
+    return null;
+  }
+}
 
 function parseQuery(querystring) {
   const params = [];
@@ -21,9 +30,15 @@ function parseQuery(querystring) {
       continue;
     }
     const index = part.indexOf("=");
-    const name = decodeURIComponent(index === -1 ? part : part.slice(0, index));
-    const value = decodeURIComponent(index === -1 ? "" : part.slice(index + 1));
-    params.push({ name, value });
+    const rawName = index === -1 ? part : part.slice(0, index);
+    const rawValue = index === -1 ? "" : part.slice(index + 1);
+    const name = safeDecode(rawName);
+    const value = safeDecode(rawValue);
+    if (name === null || value === null) {
+      params.push({ name: rawName, value: rawValue, malformed: true, raw: part });
+      continue;
+    }
+    params.push({ name, value, malformed: false, raw: part });
   }
   return params;
 }
@@ -31,6 +46,13 @@ function parseQuery(querystring) {
 function filterQueryString(querystring) {
   const kept = [];
   for (const param of parseQuery(querystring)) {
+    if (param.malformed) {
+      return { block: true, reason: "malformed-query", querystring: "" };
+    }
+    if (SIGNED.has(param.name)) {
+      kept.push(param.raw);
+      continue;
+    }
     if (!ALLOWED.has(param.name)) {
       continue;
     }

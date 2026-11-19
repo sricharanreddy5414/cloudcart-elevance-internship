@@ -82,6 +82,7 @@ Leave the existing store running. Do not run `docker compose down -v`, and do no
 - [Zero-cost review](docs/reports/zero-cost-strategy.md)
 - [Viva preparation](docs/final-report/viva-preparation.md)
 - [Phase 2 security review](docs/security/phase-2-review.md)
+- [Phase 3 remediation](docs/reports/phase-3-remediation.md)
 - [Phase 2 cost by resource](docs/reports/phase-2-cost-by-resource.md)
 - [Submission checklist](docs/final-report/submission-checklist.md)
 

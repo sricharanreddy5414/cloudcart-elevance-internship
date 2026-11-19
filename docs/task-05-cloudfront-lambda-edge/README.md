@@ -1,6 +1,13 @@
 # Task 5 — CloudFront, a private origin, and Lambda@Edge
 
-Status: **LOCAL / DOCUMENTED. Not deployed.** Terraform defines Origin Access Control, a private S3 origin, an image cache policy, and a storefront distribution. The Lambda@Edge behavior is the Node functions in `application/edge-functions/`, tested with `node --test`. Those functions are not published and are not attached to the distribution. A cache hit ratio has not been read from CloudFront.
+Status: **SOURCE READY and LOCALLY TESTED. Not DEPLOYMENT READY, not AWS DEPLOYED, not AWS VERIFIED.** Terraform defines Origin Access Control, a private S3 origin, an image cache policy, and a storefront distribution. The image behavior can take a viewer-request Lambda association only when `image_viewer_request_qualified_arn` is a published `us-east-1` version ARN. The default is empty, so nothing is associated. `$LATEST` is rejected by validation. No function is published. A cache hit ratio has not been read from CloudFront.
+
+| Function | Status | Why it is not deployment ready |
+| --- | --- | --- |
+| `query-filter.js` | LOCALLY TESTED | No zip, no role, no published version. It keeps `Expires`, `Signature`, `Key-Pair-Id`, and `Policy` so a later signed-URL behavior is not stripped. |
+| `cache-headers.js` | LOCALLY TESTED | Same packaging gap. It does not use environment variables. |
+| `webp.js` | LOCALLY TESTED | The origin-response handler does not convert. No encoder is in the package, and a native encoder may not fit the Lambda@Edge origin-response limit. |
+| `signed-url.js` | LOCALLY TESTED | The handler refuses to run at the edge. CloudFront key groups must validate signatures. The private key must not be deployed in the function. |
 
 ## Objective
 

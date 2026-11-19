@@ -24,7 +24,7 @@ The instance is Multi-AZ, not publicly accessible, in private subnets, with `req
 
 Backup retention is 7 days. That configures point-in-time recovery. It does not measure a five-minute RPO. `verified_against_rds` is false. A real test reads `LatestRestorableTime` and, if a restore is approved, times a new instance.
 
-The private route table has no NAT. An EC2 client in those subnets cannot call STS until an endpoint or another approved path exists. Do not describe the local token function as an EC2 login.
+The private route table still has no NAT and no internet route. Phase 3 adds gated interface endpoints for regional STS and Secrets Manager, plus the S3 gateway that was already there. They are not created. An IAM database token is signed on the instance from metadata credentials and does not, by itself, call STS. Say that. Do not say the endpoint was tested. Do not describe the local token function as an EC2 login.
 
 ## Task 3
 
@@ -38,7 +38,7 @@ IMDSv2 is required on the launch template.
 
 The Dockerfile and Compose file pin an image digest. ECR tag mutability is `IMMUTABLE`. ECS launch type is `EC2`, and the deployment controller is `CODE_DEPLOY` with two target groups. CodeBuild trusts `codebuild.amazonaws.com`, not the task execution role. CodePipeline has source, build, and CodeDeploy stages. Blue/green rollback in `cloudcart/deploy.py` is a simulation.
 
-The image was not built here. Docker was missing. The artifact bucket name is a placeholder and must be changed before apply.
+The image was not built here. Docker was missing. The artifact bucket name is no longer the zero account id. A paid apply builds `cloudcart-pipeline-<account-id>-<region>` or uses `artifact_bucket_name`. That apply has not been run.
 
 ## Task 5
 
@@ -50,6 +50,6 @@ Those functions are not published in `us-east-1` and are not associated with the
 
 The bucket blocks public access, enforces bucket owner, encrypts with AES256, denies non-TLS, and allows CloudFront to read only `public/*`. Lifecycle moves `public/` to Intelligent-Tiering at 30 days and Glacier at 90 days. Inventory is weekly to a second private bucket. Presigned URLs in tests expire within 300 seconds and use a local endpoint.
 
-S3 Object Lambda is closed to new customers. The Pillow thumbnail is an ordinary object and does not satisfy that requirement. The scanner matches the EICAR test string and has no ClamAV database. Do not call either one the required service.
+S3 Object Lambda is closed to new customers. The Pillow thumbnail is an ordinary object and does not satisfy that requirement. The scanner matches the EICAR test string and has no ClamAV database. An EICAR miss stays in `holding/` and is not public. Do not call either path the required service.
 
 Glacier's minimum storage duration can cost more than leaving a lab object in Standard. Do not apply that transition for a short test without a separate approval.

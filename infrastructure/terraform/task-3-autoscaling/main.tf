@@ -56,6 +56,12 @@ resource "aws_autoscaling_group" "ecs" {
   }
 }
 
+# ABANDON is intentional. CONTINUE on timeout would admit an instance whose
+# bootstrap never finished, including one that could not reach the Auto Scaling API.
+# The user-data script sends ABANDON itself on a schema or bootstrap failure
+# so the group does not wait out the full 600 second heartbeat first.
+# A persistent failure still causes a replacement launch. That is an operator
+# problem (suspend launch or fix the template), not a reason to enter service.
 resource "aws_autoscaling_lifecycle_hook" "warmup" {
   count                  = module.guard.resource_count
   name                   = "cloudcart-warmup"

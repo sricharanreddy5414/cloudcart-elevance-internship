@@ -45,4 +45,25 @@ async function maybeConvert(response, input, encoder) {
   return response;
 }
 
-module.exports = { MAX_BODY_BYTES, planConversion, maybeConvert };
+function headerValue(headers, name) {
+  const entry = (headers || {})[name] || (headers || {})[name.toLowerCase()];
+  if (!entry || !entry.length) {
+    return "";
+  }
+  return entry[0].value || "";
+}
+
+function handler(event) {
+  const cf = event.Records[0].cf;
+  const response = cf.response;
+  const plan = planConversion({
+    contentType: headerValue(response.headers, "content-type"),
+    accept: headerValue(cf.request.headers, "accept"),
+    bodyByteLength: Number(headerValue(response.headers, "content-length") || 0),
+  });
+  const reason = plan.action === "convert" ? "encoder-not-in-package" : plan.reason;
+  header(response, "X-CloudCart-WebP", reason);
+  return response;
+}
+
+module.exports = { MAX_BODY_BYTES, planConversion, maybeConvert, handler };

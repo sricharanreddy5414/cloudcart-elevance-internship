@@ -36,16 +36,24 @@ class ClusterSim:
         self.events.append({"event": "launch", "id": instance.id, "az": az, "purchase": purchase})
         return instance
 
-    def complete_hook(self, instance_id: str) -> bool:
+    def resolve_launch(self, instance_id: str) -> str:
+        """Match the launch hook. Failure abandons this instance. It does not retry it."""
+
         instance = self.instances[instance_id]
         if instance.state != "pending_wait":
             raise RuntimeError("lifecycle hook applies only while the instance is pending")
         if not instance.schema_ok or not instance.warm:
-            self.events.append({"event": "hook_held", "id": instance.id})
-            return False
+            instance.state = "terminated"
+            instance.healthy = False
+            reason = "schema" if not instance.schema_ok else "bootstrap"
+            self.events.append({"event": "hook_abandon", "reason": reason, "id": instance.id})
+            return "ABANDON"
         instance.state = "in_service"
-        self.events.append({"event": "registered", "id": instance.id})
-        return True
+        self.events.append({"event": "hook_continue", "id": instance.id})
+        return "CONTINUE"
+
+    def complete_hook(self, instance_id: str) -> bool:
+        return self.resolve_launch(instance_id) == "CONTINUE"
 
     def serving(self) -> list[Instance]:
         return [item for item in self.instances.values() if item.state == "in_service" and item.healthy]

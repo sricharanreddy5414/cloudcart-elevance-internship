@@ -28,6 +28,12 @@ variable "confirm_paid_deployment" {
   default = false
 }
 
+variable "enable_interface_endpoints" {
+  type        = bool
+  default     = true
+  description = "Create STS and Secrets Manager interface endpoints when the paid gate is also true. An interface endpoint is about USD 0.01 per Availability Zone-hour plus data. Two endpoints in two zones is about USD 0.04 per hour before GST. Verify the current ap-south-1 price before apply. This variable does not create anything while confirm_paid_deployment is false."
+}
+
 module "guard" {
   source                  = "../modules/guard"
   confirm_paid_deployment = var.confirm_paid_deployment

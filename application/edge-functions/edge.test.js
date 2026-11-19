@@ -27,6 +27,21 @@ test("query filter blocks a traversal value", () => {
   assert.equal(result.block, true);
 });
 
+test("query filter keeps CloudFront signed URL parameters and drops the rest", () => {
+  const result = filter.filterQueryString("w=10&Expires=1700000120&Signature=abc~def&Key-Pair-Id=K1&utm_source=ad");
+  assert.equal(result.block, false);
+  assert.match(result.querystring, /Expires=1700000120/);
+  assert.match(result.querystring, /Signature=abc~def/);
+  assert.match(result.querystring, /Key-Pair-Id=K1/);
+  assert.equal(result.querystring.includes("utm"), false);
+});
+
+test("query filter rejects a broken percent escape", () => {
+  const result = filter.filterQueryString("w=%E0%A4%A");
+  assert.equal(result.block, true);
+  assert.equal(result.reason, "malformed-query");
+});
+
 test("cache headers differ for images and pages, and HSTS is not preloaded", () => {
   const image = cache.applyCacheHeaders({ headers: {} }, "/products/hat.png");
   const page = cache.applyCacheHeaders({ headers: {} }, "/admin");
@@ -79,6 +94,24 @@ test("signed URL is acceptable before expiry and rejected after it", () => {
   assert.equal(fresh.acceptable, true);
   assert.equal(stale.acceptable, false);
   assert.equal(stale.expired, true);
+});
+
+test("webp origin-response handler does not convert without a packaged encoder", () => {
+  const response = webp.handler({
+    Records: [{
+      cf: {
+        request: { headers: { accept: [{ value: "image/webp" }] } },
+        response: { headers: { "content-type": [{ value: "image/png" }], "content-length": [{ value: "8" }] } },
+      },
+    }],
+  });
+  assert.equal(response.headers["x-cloudcart-webp"][0].value, "encoder-not-in-package");
+  assert.equal(response.body, undefined);
+});
+
+test("signed URL signer refuses to run as a Lambda@Edge handler", () => {
+  const response = signed.handler();
+  assert.equal(response.status, "500");
 });
 
 test("signed URL refuses a long lifetime", () => {

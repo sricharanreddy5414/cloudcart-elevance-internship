@@ -80,6 +80,15 @@ resource "aws_cloudfront_distribution" "storefront" {
     cached_methods         = ["GET", "HEAD"]
     cache_policy_id        = aws_cloudfront_cache_policy.images[0].id
     compress               = true
+
+    dynamic "lambda_function_association" {
+      for_each = var.image_viewer_request_qualified_arn == "" ? [] : [var.image_viewer_request_qualified_arn]
+      content {
+        event_type   = "viewer-request"
+        lambda_arn   = lambda_function_association.value
+        include_body = false
+      }
+    }
   }
 
   restrictions {

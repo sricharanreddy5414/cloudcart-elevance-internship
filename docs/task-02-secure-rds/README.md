@@ -28,7 +28,7 @@ RDS for PostgreSQL supports IAM database authentication, Secrets Manager rotatio
 
 These are different logins. Demonstrating one does not demonstrate the other.
 
-**IAM database authentication.** A database user is granted `rds_iam`. An EC2 instance role is allowed `rds-db:connect` on that user. The instance calls `aws rds generate-db-auth-token`. RDS returns a signed token that is valid for 15 minutes. The client connects with the database user name, the token in the password field, and TLS. PostgreSQL checks the token with IAM. On PostgreSQL, IAM authentication takes over for a user that has `rds_iam`, so that same user is not the password user. The instance uses the role's temporary credentials from the metadata service. No access key is placed on the instance.
+**IAM database authentication.** A database user is granted `rds_iam`. An EC2 instance role is allowed `rds-db:connect` on that user. The instance calls `aws rds generate-db-auth-token`. That command signs a token locally with the instance-role credentials from the metadata service. It does not call STS and RDS does not return the token. The token is valid for 15 minutes. The client connects with the database user name, the token in the password field, and TLS. The instance profile supplies the credentials. No access key is placed on the instance. The local function in `cloudcart/db.py` only imitates the token shape.
 
 **Secrets Manager rotation.** A second database user has a normal password. The password is stored as a secret. On a schedule, the rotation function changes the password in the database and stores the new version. The application reads the current password with `secretsmanager:GetSecretValue`, using its task role. IAM here decides who may read the secret. The database still checks a password. A stolen secret remains useful until the next rotation. An IAM token expires in 15 minutes.
 
@@ -40,11 +40,14 @@ Restoring builds a new database instance. That work often takes much longer than
 
 ## Network and IAM
 
-- DB subnet group: at least two private subnets in two Availability Zones.
-- `PubliclyAccessible` is false. No internet gateway route is required for the subnets to be private; the route tables will be checked anyway.
-- The database security group allows TCP 5432 from the application security group only.
-- A custom parameter group sets `rds.force_ssl=1` if the default is not already on. PostgreSQL 15 and later default it to on.
-- Clients use `sslmode=verify-full` and the Amazon RDS CA bundle.
+The implemented lab is MySQL in this repository's Task 2 stack. The PostgreSQL notes above are the EverShop store, not this stack.
+
+- Two private subnets, `10.20.10.0/24` and `10.20.11.0/24`, with a route table that has an S3 gateway endpoint and no internet route.
+- `publicly_accessible` is false. The database security group allows TCP 3306 from the application security group only. The parameter `require_secure_transport` is 1.
+- Phase 3 adds interface endpoints for `com.amazonaws.ap-south-1.sts` and `com.amazonaws.ap-south-1.secretsmanager` when `enable_interface_endpoints` and the paid gate are both true. Private DNS is on. The STS endpoint policy allows only `sts:GetCallerIdentity`. Clients must use the regional STS name. The global name `sts.amazonaws.com` is not served by this endpoint.
+- NAT Gateway and a NAT instance were rejected. Both need an internet path. Interface endpoints do not.
+- The endpoints are not created. `terraform plan` still adds nothing. Connectivity has not been verified against AWS.
+- Planning cost, to be checked on the VPC pricing page before any apply: about USD 0.01 per endpoint ENI-hour. Two endpoints in two zones is about USD 0.04 per hour, about ₹4.40 per hour with GST at ₹93.48 per USD, and about ₹3,200 per month if left running. Data processing is extra.
 
 ## Evidence to collect later
 

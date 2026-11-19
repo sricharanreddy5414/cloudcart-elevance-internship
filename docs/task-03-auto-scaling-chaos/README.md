@@ -21,7 +21,17 @@ Add and remove EverShop capacity automatically, including Spot and On-Demand, an
 
 The group runs the ECS container instances in private subnets in at least two Availability Zones. The mixed-instances policy sets a base of On-Demand capacity and a percentage of Spot above that. Spot interruption is a normal event; the hook and the load balancer have to tolerate it.
 
-The launch lifecycle hook leaves the instance in `Pending:Wait`. A bootstrap script waits until the schema version in the database matches the image, then warms the local process, then completes the hook. Only after that may tasks be placed and registered with the target group.
+The launch lifecycle hook leaves the instance in `Pending:Wait`. `default_result` stays `ABANDON`. `CONTINUE` would put an unfinished bootstrap into service, including a machine that could not reach the Auto Scaling API. The user-data script records one heartbeat, compares the schema version in Parameter Store, and does not run a migration.
+
+What the script does:
+
+1. Bootstrap succeeds. The schema matches. The script sends `CONTINUE`, then starts the ECS agent. The group health-check grace is 300 seconds. Target registration is the ECS service and the target group, after the instance is `InService`.
+2. Bootstrap fails, or the schema does not match. The script sends `ABANDON` immediately and does not start the agent. Auto Scaling terminates that instance and launches a replacement. A persistent failure repeats. Suspend launch or fix the template. Do not switch the timeout result to `CONTINUE` to hide the loop.
+3. Database migration fails. This path does not migrate. A pipeline migration failure must stop the rollout before new instances launch. If the published schema version does not match the image, the hook takes the abandon path above.
+4. Application health check fails. That is after the hook. The group uses ELB health checks. An unhealthy instance is replaced by the group. The hook does not mark a target healthy.
+5. The hook times out at 600 seconds. The default result `ABANDON` terminates the instance. The same replacement rule as a failed bootstrap applies.
+
+This is source and a local model in `cloudcart/scaling.py`. It is not an EC2 termination test.
 
 The schema change itself runs once, from the pipeline, with a lock. If every new instance ran a migration, two instances launching together could apply the same change at once. The hook still performs a migration activity: it checks the version and refuses to continue when the version is behind. That is the safe reading of the requirement. Decision D-008 records it.
 
