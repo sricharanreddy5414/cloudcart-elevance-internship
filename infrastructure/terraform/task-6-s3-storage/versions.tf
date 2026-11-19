@@ -6,6 +6,10 @@ terraform {
       source  = "hashicorp/aws"
       version = "5.74.0"
     }
+    archive = {
+      source  = "hashicorp/archive"
+      version = "2.7.0"
+    }
   }
 }
 
@@ -41,7 +45,32 @@ variable "bucket_name" {
 variable "cloudfront_distribution_arn" {
   type        = string
   default     = ""
-  description = "Distribution allowed to read public/*. Empty is rejected when the paid gate creates the bucket policy."
+  description = "Task 5 image distribution ARN. Empty is rejected when the paid gate creates the bucket policy. The apex distribution must not be used."
+
+  validation {
+    condition     = var.cloudfront_distribution_arn == "" || (can(regex("^arn:aws:cloudfront::[0-9]{12}:distribution/[A-Z0-9]+$", var.cloudfront_distribution_arn)) && !strcontains(var.cloudfront_distribution_arn, "000000000000"))
+    error_message = "cloudfront_distribution_arn must be a real CloudFront distribution ARN. A zero account id is rejected."
+  }
+}
+
+variable "quarantine_retention_days" {
+  type    = number
+  default = 1
+
+  validation {
+    condition     = var.quarantine_retention_days >= 1 && var.quarantine_retention_days <= 7
+    error_message = "quarantine_retention_days must be from 1 to 7."
+  }
+}
+
+variable "rejected_retention_days" {
+  type    = number
+  default = 7
+
+  validation {
+    condition     = var.rejected_retention_days >= 1 && var.rejected_retention_days <= 30
+    error_message = "rejected_retention_days must be from 1 to 30."
+  }
 }
 
 module "guard" {

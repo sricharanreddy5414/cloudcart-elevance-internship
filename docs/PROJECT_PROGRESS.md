@@ -1,6 +1,6 @@
 # CloudCart progress
 
-Updated: 20 November 2026 (Asia/Calcutta), after the Task 5 image distribution.
+Updated: 20 November 2026 (Asia/Calcutta), after the Task 6 quarantine pipeline.
 
 No task is complete. A task is complete only when its AWS evidence exists. None of these stacks has been applied.
 
@@ -11,7 +11,7 @@ No task is complete. A task is complete only when its AWS evidence exists. None 
 | 3 Auto Scaling and chaos | TESTED_LOCAL | Mixed-capacity model, lifecycle hook, zone removal, health failure, and latency have unit tests. Terraform validates. | No Auto Scaling group. Measured availability is from the model, not from EC2. |
 | 4 ECS, ECR, pipeline | TESTED_LOCAL | Digest pin, immutable ECR, EC2 capacity provider with managed scaling off, IP target groups, approval before CodeDeploy, and rollback-image selection have contract tests. Plan still adds nothing. | The image was not built here. Docker is not installed. ECR, ECS, the ALB, CodeBuild, and CodePipeline were not created. The container still runs as root. |
 | 5 CloudFront and Lambda@Edge | TESTED_LOCAL | The image distribution is separate from the apex. Path, encoding, and origin-override tests pass. Terraform validates and plans no changes. | Functions are not published in us-east-1. Cache hit ratio is not a CloudFront statistic. |
-| 6 S3 product images | TESTED_LOCAL | Presigned URLs, quarantine, bucket policy, and lifecycle configuration are tested. Terraform validates. | No bucket. ClamAV definitions are not in the scanner. S3 Object Lambda was not called. |
+| 6 S3 product images | TESTED_LOCAL | Quarantine posts, image checks, EICAR rejection, and a simulated CLEAN promotion pass. Terraform validates and plans no changes. | No bucket. The packaged worker cannot clear a file. ClamAV was not built. |
 
 Labels used in evidence: LOCAL, SIMULATED, DOCUMENTED, BLOCKED, REAL_AWS. There are no REAL_AWS results.
 

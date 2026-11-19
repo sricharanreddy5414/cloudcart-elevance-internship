@@ -20,10 +20,36 @@
         "Service": "cloudfront.amazonaws.com"
       },
       "Action": "s3:GetObject",
-      "Resource": "${bucket_arn}/public/*",
+      "Resource": "${bucket_arn}/public/products/*",
       "Condition": {
         "StringEquals": {
           "AWS:SourceArn": "${distribution_arn}"
+        }
+      }
+    },
+    {
+      "Sid": "DenyCloudFrontPrivatePrefixes",
+      "Effect": "Deny",
+      "Principal": {
+        "Service": "cloudfront.amazonaws.com"
+      },
+      "Action": "s3:*",
+      "Resource": [
+        "${bucket_arn}/quarantine/*",
+        "${bucket_arn}/rejected/*",
+        "${bucket_arn}/holding/*",
+        "${bucket_arn}/incoming/*"
+      ]
+    },
+    {
+      "Sid": "DenyPublicAcl",
+      "Effect": "Deny",
+      "Principal": "*",
+      "Action": ["s3:PutObject", "s3:PutObjectAcl"],
+      "Resource": "${bucket_arn}/*",
+      "Condition": {
+        "StringEquals": {
+          "s3:x-amz-acl": ["public-read", "public-read-write"]
         }
       }
     }

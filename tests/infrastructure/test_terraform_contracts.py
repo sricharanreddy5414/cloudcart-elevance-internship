@@ -234,6 +234,33 @@ class TerraformContractTest(unittest.TestCase):
         self.assertIn("GLACIER", text)
         self.assertIn("aws_s3_bucket_inventory", text)
         self.assertIn("aws_s3_bucket_versioning", text)
+        self.assertIn("public/products/", text)
+        self.assertIn("quarantine/", text)
+        self.assertIn("aws_sqs_queue", text)
+        self.assertIn("aws_dynamodb_table", text)
+        self.assertIn("prevent_destroy", text)
+        self.assertNotIn("prefix = \"public/\"\n", text)
+
+    def test_task_six_rejects_a_zero_distribution(self):
+        binary = shutil.which("terraform") or str(Path.home() / ".local" / "bin" / "terraform")
+        if not Path(binary).exists():
+            self.skipTest("terraform is not installed")
+        result = subprocess.run(
+            [
+                binary,
+                "plan",
+                "-input=false",
+                "-lock=false",
+                "-var=cloudfront_distribution_arn=arn:aws:cloudfront::000000000000:distribution/E1234567890ABC",
+            ],
+            cwd=TF / "task-6-s3-storage",
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        combined = result.stdout + result.stderr
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("cloudfront_distribution_arn", combined)
 
 
 if __name__ == "__main__":

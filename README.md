@@ -38,7 +38,7 @@ Do not copy this repository over the original store folder, and do not delete `p
 | 3 | Mixed Spot and On-Demand, scaling, failure tests | [Model, not EC2](docs/task-03-autoscaling/README.md) | No |
 | 4 | EverShop on ECS, ECR, CodePipeline, blue/green | [Image file, not a built image](docs/task-04-ecs-ecr-cicd/README.md) | No |
 | 5 | Private S3 origin, CloudFront, Lambda@Edge | [Source, not a published function](docs/task-05-cloudfront-lambda-edge-image-delivery/README.md) | No |
-| 6 | Private images, lifecycle, inventory, scanning | [EICAR check, not ClamAV](docs/task-06-advanced-s3/README.md) | No |
+| 6 | Private images, lifecycle, inventory, scanning | [Quarantine pipeline, not a live scan](docs/task-06-secure-image-storage-pipeline/README.md) | No |
 
 The store database is PostgreSQL. Task 2 does not replace it. Architecture: [docs/architecture/integrated-architecture.md](docs/architecture/integrated-architecture.md). Order, if a deployment is ever approved: [docs/reports/deployment-dependency-map.md](docs/reports/deployment-dependency-map.md).
 

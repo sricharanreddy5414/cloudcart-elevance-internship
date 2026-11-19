@@ -2,10 +2,16 @@
   "Version": "2012-10-17",
   "Statement": [
     {
-      "Sid": "ProductImages",
+      "Sid": "ReadPublishedImages",
       "Effect": "Allow",
-      "Action": ["s3:GetObject", "s3:PutObject"],
-      "Resource": "arn:aws:s3:::cloudcart-product-images-*/*"
+      "Action": ["s3:GetObject"],
+      "Resource": "arn:aws:s3:::cloudcart-product-images-*/public/products/*"
+    },
+    {
+      "Sid": "UploadToQuarantine",
+      "Effect": "Allow",
+      "Action": ["s3:PutObject"],
+      "Resource": "arn:aws:s3:::cloudcart-product-images-*/quarantine/*"
     },
     {
       "Sid": "ReadDatabaseSecret",

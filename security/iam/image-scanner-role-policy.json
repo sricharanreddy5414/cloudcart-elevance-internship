@@ -1,0 +1,41 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ReadQuarantine",
+      "Effect": "Allow",
+      "Action": ["s3:GetObject", "s3:GetObjectVersion"],
+      "Resource": "arn:aws:s3:::cloudcart-product-images-*/quarantine/*"
+    },
+    {
+      "Sid": "WriteRejected",
+      "Effect": "Allow",
+      "Action": ["s3:PutObject"],
+      "Resource": "arn:aws:s3:::cloudcart-product-images-*/rejected/*"
+    },
+    {
+      "Sid": "PromoteCleanVersion",
+      "Effect": "Allow",
+      "Action": ["s3:PutObject"],
+      "Resource": "arn:aws:s3:::cloudcart-product-images-*/public/products/*"
+    },
+    {
+      "Sid": "RecordUploadState",
+      "Effect": "Allow",
+      "Action": ["dynamodb:GetItem", "dynamodb:PutItem", "dynamodb:UpdateItem"],
+      "Resource": "arn:aws:dynamodb:ap-south-1:*:table/cloudcart-image-uploads"
+    },
+    {
+      "Sid": "ReadScanQueue",
+      "Effect": "Allow",
+      "Action": ["sqs:ReceiveMessage", "sqs:DeleteMessage", "sqs:GetQueueAttributes"],
+      "Resource": "arn:aws:sqs:ap-south-1:*:cloudcart-image-scan"
+    },
+    {
+      "Sid": "ScannerLogs",
+      "Effect": "Allow",
+      "Action": ["logs:CreateLogStream", "logs:PutLogEvents"],
+      "Resource": "arn:aws:logs:ap-south-1:*:log-group:/aws/lambda/cloudcart-image-scan:*"
+    }
+  ]
+}

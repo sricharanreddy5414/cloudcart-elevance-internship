@@ -15,6 +15,9 @@ class PolicyTest(unittest.TestCase):
         self.assertEqual(sids["DenyInsecureTransport"]["Condition"]["Bool"]["aws:SecureTransport"], "false")
         self.assertEqual(sids["AllowCloudFrontRead"]["Principal"]["Service"], "cloudfront.amazonaws.com")
         self.assertIn("AWS:SourceArn", sids["AllowCloudFrontRead"]["Condition"]["StringEquals"])
+        self.assertEqual(sids["AllowCloudFrontRead"]["Resource"], "${bucket_arn}/public/products/*")
+        self.assertIn("${bucket_arn}/quarantine/*", sids["DenyCloudFrontPrivatePrefixes"]["Resource"])
+        self.assertIn("${bucket_arn}/rejected/*", sids["DenyCloudFrontPrivatePrefixes"]["Resource"])
 
     def test_iam_policies_separate_roles_and_scope_database_connect(self):
         task = json.loads((ROOT / "security" / "iam" / "task-role-policy.json").read_text(encoding="utf-8"))

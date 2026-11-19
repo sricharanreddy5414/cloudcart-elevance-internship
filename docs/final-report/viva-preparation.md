@@ -48,8 +48,8 @@ The functions are not published in `us-east-1`. A cache-hit ratio has not been r
 
 ## Task 6
 
-The bucket blocks public access, enforces bucket owner, encrypts with AES256, denies non-TLS, and allows CloudFront to read only `public/*`. Lifecycle moves `public/` to Intelligent-Tiering at 30 days and Glacier at 90 days. Inventory is weekly to a second private bucket. Presigned URLs in tests expire within 300 seconds and use a local endpoint.
+The bucket blocks public access, enforces bucket owner, encrypts with AES256, and denies non-TLS. CloudFront may read `public/products/*` for the Task 5 distribution and is denied the quarantine and rejected prefixes. Current images stay in Standard. Glacier is only for noncurrent versions after 90 days. Inventory is a weekly CSV.
 
-S3 Object Lambda is closed to new customers. The Pillow thumbnail is an ordinary object and does not satisfy that requirement. The scanner matches the EICAR test string and has no ClamAV database. An EICAR miss stays in `holding/` and is not public. Do not call either path the required service.
+The seller API returns a 120-second presigned POST for `quarantine/` and ignores a caller-supplied key. The packaged worker matches EICAR and cannot promote. A test double shows the CLEAN path. ClamAV 1.4.1 was not built. Object Lambda is not used.
 
 Glacier's minimum storage duration can cost more than leaving a lab object in Standard. Do not apply that transition for a short test without a separate approval.
