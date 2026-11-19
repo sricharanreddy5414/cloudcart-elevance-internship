@@ -1,67 +1,121 @@
-# Task 2 — Private database, IAM authentication, rotation, and recovery
+# Task 2 — Private MySQL, IAM authentication, rotation, and recovery
 
-Status: **LOCAL / SIMULATED. Not deployed.** The Terraform stack is a separate MySQL 8 security lab: private subnets, Multi-AZ, `publicly_accessible = false`, IAM authentication, `require_secure_transport`, and a Secrets Manager-managed master password. EverShop stays on PostgreSQL. The local rotation, 15-minute token, TLS rejection, and five-minute RPO checks are simulations. `verified_against_rds` is false. No RDS instance exists.
+Status: **TERRAFORM VALIDATED. Not deployed.** `confirm_paid_deployment` defaults to false, so a plan adds nothing. No VPC, database, key, secret, or function exists. EverShop stays on PostgreSQL. This stack is the MySQL security lab and is not the store database.
 
-## Objective
+## Architecture
 
-Run the EverShop database in private subnets, with Multi-AZ, no public address, encrypted connections, two different authentication mechanisms, and a demonstrated five-minute recovery point.
+```mermaid
+flowchart LR
+  client[Client role in a private subnet]
+  mysql[MySQL Multi-AZ]
+  secret[Secrets Manager master secret]
+  kms[Customer managed key]
+  client -->|TLS 3306 and a 15 minute token| mysql
+  secret --> kms
+  mysql --> kms
+```
 
-## Requirements
+The lab VPC is `10.20.0.0/16`. Two subnets, `10.20.10.0/24` and `10.20.11.0/24`, sit in `ap-south-1a` and `ap-south-1b`. Their route table has an S3 gateway endpoint and no internet route. `map_public_ip_on_launch` is false. There is no NAT gateway.
 
-1. Database in private subnets.
-2. Multi-AZ.
-3. Public accessibility disabled.
-4. IAM database authentication.
-5. TLS-only connections.
-6. Secrets Manager automatic rotation.
-7. An EC2 instance authenticating with a temporary IAM token.
-8. Point-in-time recovery.
-9. Evidence for the requested five-minute RPO.
+The database subnet group uses only those subnets. `publicly_accessible` is false. The database security group allows TCP 3306 from the application security group and from nowhere else. The application security group has no ingress, so there is no SSH from the internet. Its egress is MySQL to the database security group, DNS to the VPC resolver, HTTPS to the S3 prefix list, and HTTPS to the interface endpoints when those are enabled.
 
-## Engine conflict
+Task 4 does not use this VPC. The store's PostgreSQL path stays on port 5432 and is selected only when `database_security_group_id` is set there. Do not point EverShop at this MySQL instance.
 
-The brief names MySQL. EverShop supports PostgreSQL only. Decision D-001 proposes RDS for PostgreSQL, with every control above, and asks the mentor whether a separate unused MySQL instance is also required. Neither database will be created until that is answered and the cost is approved.
+## RDS configuration
 
-RDS for PostgreSQL supports IAM database authentication, Secrets Manager rotation, Multi-AZ, and `rds.force_ssl`.
+| Setting | Value |
+| --- | --- |
+| Engine | MySQL 8.0, minor upgrades left to RDS |
+| Class | `db.t3.micro` by default |
+| Deployment | Multi-AZ, one standby |
+| Storage | gp3, 20 GiB, autoscaling ceiling 100 GiB |
+| Encryption | Customer managed key, rotation enabled |
+| Public access | false |
+| IAM authentication | enabled |
+| TLS | `require_secure_transport=1`, `tls_version=TLSv1.2,TLSv1.3` |
+| `local_infile` | 0 |
+| Audit | MariaDB audit plugin: CONNECT, QUERY_DDL, QUERY_DCL |
+| Logs | audit, error, slowquery |
+| Backups | 7 days, window 18:30–19:00 UTC |
+| Deletion | protection on, `prevent_destroy`, final snapshot required |
+| Apply | `apply_immediately` is false |
 
-## Two mechanisms
+Full query text is not sent to the audit log. A lab that logs every statement copies application data into CloudWatch.
 
-These are different logins. Demonstrating one does not demonstrate the other.
+## Two logins
 
-**IAM database authentication.** A database user is granted `rds_iam`. An EC2 instance role is allowed `rds-db:connect` on that user. The instance calls `aws rds generate-db-auth-token`. That command signs a token locally with the instance-role credentials from the metadata service. It does not call STS and RDS does not return the token. The token is valid for 15 minutes. The client connects with the database user name, the token in the password field, and TLS. The instance profile supplies the credentials. No access key is placed on the instance. The local function in `cloudcart/db.py` only imitates the token shape.
+These users are not interchangeable.
 
-**Secrets Manager rotation.** A second database user has a normal password. The password is stored as a secret. On a schedule, the rotation function changes the password in the database and stores the new version. The application reads the current password with `secretsmanager:GetSecretValue`, using its task role. IAM here decides who may read the secret. The database still checks a password. A stolen secret remains useful until the next rotation. An IAM token expires in 15 minutes.
+`cloudcart_iam` is created from `application/database/mysql-lab/rds-iam-user.sql` after the instance exists. The plugin is `AWSAuthenticationPlugin`. The user has no password. The client role may call `rds-db:connect` only on `arn:aws:rds-db:ap-south-1:ACCOUNT:dbuser:RESOURCE_ID/cloudcart_iam`. The account and resource id are filled from the instance at apply time. The reviewed template is `security/iam/rds-connect-policy.json`.
 
-## Recovery point and recovery time
+The token is signed on the instance from the instance-role credentials. The signature host is `rds.ap-south-1.amazonaws.com`. RDS does not return the token, and the call does not go to STS. The token lasts 15 minutes. The client must open a new one at least a minute before that, over TLS, and must check the Amazon RDS certificate. `cloudcart/db.py` records that plan and a fake token shape. It does not sign a real token.
 
-Automated backups plus transaction logs give point-in-time recovery inside the retention window. RDS uploads those logs about every five minutes, so the latest restorable time is normally within about five minutes of now. The evidence for a five-minute RPO is that timestamp compared with the clock.
+`cloudcart_admin` is the master user. RDS creates its password in Secrets Manager and rotates that secret on the RDS schedule, which defaults to 7 days. Terraform does not set a password and does not store one. A rotation Lambda is not attached, because a second rotator would fight the RDS-managed rotation. The instance profile cannot read that secret. An operator retrieves it with a separate admin role when a break-glass login is required. The application does not use the master password.
 
-Restoring builds a new database instance. That work often takes much longer than five minutes. The brief does not set a five-minute recovery time. The original instance is left in place by a restore. The new instance is deleted after the screenshot, because it is billed separately.
+If rotation fails, Secrets Manager leaves `AWSCURRENT` on the previous version. The EventBridge rule `cloudcart-mysql-rotation-failed` writes `RotationFailed` into `/cloudcart/mysql/rotation`. The local simulation discards `AWSPENDING` and puts the database password back to `AWSCURRENT`. That simulation is not an RDS rotation.
 
-## Network and IAM
+## Administration
 
-The implemented lab is MySQL in this repository's Task 2 stack. The PostgreSQL notes above are the EverShop store, not this stack.
+Port 22 is not opened. This stack does not create an EC2 instance. It creates the instance profile a private instance would use. Session Manager would also need the Systems Manager endpoints, which are a separate hourly charge and are not in this stack. Do not add a bastion to reach the database.
 
-- Two private subnets, `10.20.10.0/24` and `10.20.11.0/24`, with a route table that has an S3 gateway endpoint and no internet route.
-- `publicly_accessible` is false. The database security group allows TCP 3306 from the application security group only. The parameter `require_secure_transport` is 1.
-- Phase 3 adds interface endpoints for `com.amazonaws.ap-south-1.sts` and `com.amazonaws.ap-south-1.secretsmanager` when `enable_interface_endpoints` and the paid gate are both true. Private DNS is on. The STS endpoint policy allows only `sts:GetCallerIdentity`. Clients must use the regional STS name. The global name `sts.amazonaws.com` is not served by this endpoint.
-- NAT Gateway and a NAT instance were rejected. Both need an internet path. Interface endpoints do not.
-- The endpoints are not created. `terraform plan` still adds nothing. Connectivity has not been verified against AWS.
-- Planning cost, to be checked on the VPC pricing page before any apply: about USD 0.01 per endpoint ENI-hour. Two endpoints in two zones is about USD 0.04 per hour, about ₹4.40 per hour with GST at ₹93.48 per USD, and about ₹3,200 per month if left running. Data processing is extra.
+## Backup and recovery
 
-## Evidence to collect later
+`backup_retention_days` must be from 1 to 35. A value of 0 is rejected because it turns off point-in-time recovery. Automated backups plus transaction logs are what RDS uses for point-in-time restore. RDS uploads those logs about every five minutes, so a five-minute recovery point is the target. It is not a measured `LatestRestorableTime`. A passing local calculation does not restore an instance.
 
-- VPC, private subnets, and route tables.
-- RDS settings: engine, Multi-AZ, public access, backup retention, IAM auth, parameter group.
-- Security group rules.
-- A successful connection with an IAM token from EC2, and a rejected non-TLS connection.
-- A rotation that produces a new secret version and still allows a login.
-- `LatestRestorableTime` within about five minutes of the check. If a restore is approved, the new instance's endpoint and the time the restore took, labeled as recovery time.
+A restore creates a new instance. That work is recovery time, and it is longer than five minutes. The original instance stays. The new instance bills until it is deleted. No restore has been run.
+
+Alarms exist for CPU above 80 percent, free storage below 2 GiB, and more than 40 connections. No email or SMS topic is attached.
+
+## Deployment prerequisites
+
+1. `confirm_paid_deployment = true` for this stack only, with a named rupee ceiling.
+2. `local_validate_credentials = false` and a non-root identity that can create the database, the key grant, and the client role.
+3. After apply, run `rds-iam-user.sql` on this instance only.
+4. Delegate nothing in DNS. This stack has no domain.
+
+## Validation commands
+
+```powershell
+terraform -chdir=infrastructure/terraform/task-2-secure-rds fmt -check
+terraform -chdir=infrastructure/terraform/task-2-secure-rds init -backend=false -input=false
+terraform -chdir=infrastructure/terraform/task-2-secure-rds validate
+terraform -chdir=infrastructure/terraform/task-2-secure-rds plan -input=false -lock=false
+terraform -chdir=infrastructure/terraform/task-2-secure-rds plan -input=false -lock=false -var=backup_retention_days=0
+python -m unittest tests.infrastructure.test_terraform_contracts tests.unit.test_database_security tests.security.test_policies_and_secrets
+```
+
+The zero-retention plan must fail. A plan exit code of 0 with the defaults means no resources change. It is not an applied database. `tfsec` and `checkov` are not installed here.
 
 ## Cost
 
-Multi-AZ bills two instances and is outside the classic free-tier database allowance. A restore bills another instance until it is deleted. Secrets Manager bills per secret per month. Approval is required before either is created. Single-AZ is cheaper and does not meet the Multi-AZ requirement; if that is all that gets approved, the report will say so.
+These are planning figures, not a bill. USD, before GST. The instance price is a secondary listing for RDS MySQL `db.t3.micro` in `ap-south-1`, updated 19 October 2026: about $0.025 per hour Single-AZ and $0.049 per hour Multi-AZ. Confirm it on the Amazon RDS for MySQL pricing page before any apply. A 730-hour month at $0.049 is about $36 for compute.
 
-## Not done
+| Item | Assumption |
+| --- | --- |
+| Multi-AZ instance | About $0.049 per hour. One standby, not two readable standbys. |
+| gp3 storage | 20 GiB to start, ceiling 100 GiB. Multi-AZ stores a second copy. Read the Mumbai gp3 row before apply. This note does not invent a per-GiB rate. gp3 baseline I/O is included. |
+| Backup storage | Backup storage up to the provisioned size is not charged. Extra snapshots and a long retention window are. |
+| Secrets Manager | One RDS-managed secret, $0.40 per secret-month, prorated hourly, plus $0.05 per 10,000 API calls. |
+| Customer managed key | $1 per month, prorated hourly. Automatic rotation can add $1 per month for the first and second rotation. Requests above 20,000 per month are extra. |
+| Interface endpoints | About $0.01 per endpoint ENI-hour. Two endpoints in two zones is about $0.04 per hour, about $29 in a 730-hour month, plus data. |
+| Alarms and logs | A few CloudWatch alarms and a 14-day rotation log. Quiet while the database is idle. Audit and slow-query logs grow with traffic. |
+| EC2 | This stack does not create an instance. |
 
-No VPC, subnet, instance, secret, or restore exists in AWS. The five-minute figure is the RDS log-upload interval used by the calculator. It is not a measured `LatestRestorableTime`. Label: SIMULATED, and BLOCKED for REAL_AWS.
+A month left running is on the order of $70 before storage, logs, data, and GST. AWS Budgets does not stop it. A short window still bills instance seconds, with a 10-minute minimum after a billable change, and endpoint hours until the endpoints are deleted.
+
+## Rollback
+
+`deletion_protection` and `prevent_destroy` block an accidental destroy. Removing them is a separate reviewed change. Take a snapshot first. Deleting the instance can leave a final snapshot named `cloudcart-mysql-final`. Automated backups are deleted with the instance so they do not keep billing. The customer managed key cannot be deleted while the instance uses it. After the instance is gone, schedule the key for deletion. A key that is scheduled for deletion is not charged. A secret scheduled for deletion is not charged.
+
+To undo a bad password rotation, read `AWSCURRENT` and do not delete the instance. The previous version remains until a later rotation replaces `AWSPREVIOUS`.
+
+## Evidence
+
+| Class | Result |
+| --- | --- |
+| Implemented in code | Private Multi-AZ MySQL, TLS parameters, IAM connect policy, RDS-managed secret, key, alarms, rotation-failure rule, backup retention. |
+| Validated locally | fmt, init, validate, a zero-change plan, a rejected zero-retention plan, and the unit tests. |
+| Confirmed by AWS | Nothing. |
+| Not yet verified | A live endpoint, an IAM login, a rejected non-TLS login, a rotated secret version, `LatestRestorableTime`, and a restore. |
+
+The boxes in `evidence/task-2-secure-rds/README.md` stay open.

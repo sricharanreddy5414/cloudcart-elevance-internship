@@ -5,6 +5,7 @@ from cloudcart.db import (
     DatabaseUsers,
     SecretStore,
     assess_rpo,
+    iam_login_plan,
     issue_iam_token,
     rotate_password,
     token_is_expired,
@@ -32,6 +33,32 @@ class DatabaseSecurityTest(unittest.TestCase):
         self.assertFalse(database.authenticate("cloudcart_iam", token, tls=False))
         with self.assertRaises(RotationError):
             rotate_password(SecretStore("unused"), database, "cloudcart_iam")
+
+    def test_failed_rotation_keeps_the_current_password(self):
+        class RejectsNewPassword(DatabaseUsers):
+            def authenticate(self, user, secret, *, tls):
+                if secret != "original-password":
+                    return False
+                return super().authenticate(user, secret, tls=tls)
+
+        store = SecretStore("original-password")
+        database = RejectsNewPassword()
+        database.set_password("cloudcart_app", "original-password")
+        with self.assertRaises(RotationError):
+            rotate_password(store, database, "cloudcart_app")
+        self.assertNotIn("AWSPENDING", store.versions)
+        self.assertEqual(store.get("AWSCURRENT"), "original-password")
+        self.assertTrue(database.authenticate("cloudcart_app", "original-password", tls=True))
+
+    def test_iam_login_plan_has_no_secret(self):
+        plan = iam_login_plan("cloudcart_iam", "cloudcart-mysql.example.invalid")
+        self.assertEqual(plan["signing_host"], "rds.ap-south-1.amazonaws.com")
+        self.assertEqual(plan["token_lifetime_seconds"], 900)
+        self.assertTrue(plan["ssl"])
+        self.assertNotIn("password", plan)
+        self.assertNotIn("token", plan)
+        with self.assertRaises(ValueError):
+            iam_login_plan("cloudcart_admin", "cloudcart-mysql.example.invalid")
 
     def test_iam_token_lifetime_is_fifteen_minutes(self):
         issued = datetime(2026, 11, 17, 12, 0, tzinfo=timezone.utc)

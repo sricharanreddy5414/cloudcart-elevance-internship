@@ -53,14 +53,14 @@ One CloudFront distribution owns the apex alias. Its origin group tries the ALB 
 
 WAF needs two web ACLs. The CloudFront-scope ACL is created in `us-east-1`. The regional ACL is created in `ap-south-1` and is associated with the ALB only when that ARN is supplied. Each ACL includes the AWS common rule group and one IP rate rule. `SizeRestrictions_BODY` is counted rather than blocked so a normal store POST is not cut off at 8 KB.
 
-**Task 2 — system of record.** The database is the store database. See decision D-001: EverShop can use PostgreSQL, and the brief names MySQL. The proposed engine is RDS for PostgreSQL in private subnets, Multi-AZ, `PubliclyAccessible=false`. The DB subnet group spans at least two Availability Zones.
+**Task 2 — database security lab.** EverShop stays on PostgreSQL. The Task 2 stack is the MySQL 8 lab the brief asks for, in its own VPC, and it is not the store database. It is private, Multi-AZ, and not publicly accessible. The DB subnet group uses two private subnets in two Availability Zones.
 
-Two logins:
+Two logins, on two different users:
 
-- An application password user whose password is rotated by Secrets Manager.
-- A separate IAM database user. An EC2 task role calls `rds generate-db-auth-token`. The token lasts 15 minutes and is used as the password over TLS. Granting `rds_iam` on PostgreSQL makes IAM the authentication method for that user.
+- `cloudcart_admin` has a password that RDS stores and rotates in Secrets Manager.
+- `cloudcart_iam` uses the AWS authentication plugin and a 15-minute token. The client role may call `rds-db:connect` only for that user.
 
-TLS for every connection is enforced with `rds.force_ssl=1`. PostgreSQL 15 and later default this parameter to on. IAM authentication also requires it. The client uses `verify-full` and the Amazon RDS CA bundle so the connection checks the server certificate.
+TLS is required with `require_secure_transport=1` and `tls_version=TLSv1.2,TLSv1.3`. The client checks the Amazon RDS certificate.
 
 Backups use the automated backup window and a retention period inside 1–35 days. RDS uploads transaction logs about every five minutes. The recovery point objective of five minutes is demonstrated with `LatestRestorableTime`, which should stay within about five minutes of the current time. Restoring creates a new instance and takes longer than five minutes. That duration is recovery time, and the brief does not set a five-minute recovery time. The restored instance is deleted after the evidence is captured, because it bills on its own.
 

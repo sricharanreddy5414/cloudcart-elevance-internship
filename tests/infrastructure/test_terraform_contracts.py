@@ -1,3 +1,5 @@
+import shutil
+import subprocess
 import unittest
 from pathlib import Path
 
@@ -55,8 +57,46 @@ class TerraformContractTest(unittest.TestCase):
         self.assertIn("private_dns_enabled", text)
         self.assertIn("sts:GetCallerIdentity", text)
         self.assertNotIn("aws_nat_gateway", text)
-        self.assertNotIn("aws_instance", text)
+        self.assertNotIn('resource "aws_instance"', text)
         self.assertNotIn("postgres-data", text.replace("does not attach to postgres-data", ""))
+        self.assertRegex(text, r"publicly_accessible\s*=\s*false")
+        self.assertRegex(text, r"storage_encrypted\s*=\s*true")
+        self.assertRegex(text, r"multi_az\s*=\s*true")
+        self.assertRegex(text, r"iam_database_authentication_enabled\s*=\s*true")
+        self.assertRegex(text, r"deletion_protection\s*=\s*true")
+        self.assertRegex(text, r"map_public_ip_on_launch\s*=\s*false")
+        self.assertIn("prevent_destroy = true", text)
+        self.assertIn("rds-db:connect", text)
+        self.assertIn("cloudcart_iam", text)
+        self.assertIn("kms_key_id", text)
+        self.assertIn("master_user_secret_kms_key_id", text)
+        self.assertIn("max_allocated_storage", text)
+        self.assertIn("backup_retention_days", text)
+        self.assertIn("local_infile", text)
+        self.assertIn("TLSv1.2,TLSv1.3", text)
+        self.assertIn("RotationFailed", text)
+        self.assertIn("aws_iam_instance_profile", text)
+        self.assertIn("referenced_security_group_id", text)
+        self.assertNotIn("0.0.0.0/0", text)
+        self.assertNotRegex(text, r"from_port\s*=\s*22")
+        self.assertNotIn("secret_string", text)
+        self.assertNotIn("IDENTIFIED BY", text.upper())
+        self.assertIn("backup_retention_days must be from 1 to 35", text)
+
+    def test_task_two_rejects_zero_backup_retention(self):
+        binary = shutil.which("terraform") or str(Path.home() / ".local" / "bin" / "terraform")
+        if not Path(binary).exists():
+            self.skipTest("terraform is not installed")
+        result = subprocess.run(
+            [binary, "plan", "-input=false", "-lock=false", "-var=backup_retention_days=0"],
+            cwd=TF / "task-2-secure-rds",
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        combined = result.stdout + result.stderr
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("backup_retention_days", combined)
 
     def test_task_three_mixes_purchases_and_holds_the_hook(self):
         text = read_stack("task-3-autoscaling")

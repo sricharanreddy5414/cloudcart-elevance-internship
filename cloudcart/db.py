@@ -37,6 +37,9 @@ class SecretStore:
         self.versions["AWSCURRENT"] = pending
         del self.versions["AWSPENDING"]
 
+    def discard_pending(self) -> None:
+        self.versions.pop("AWSPENDING", None)
+
 
 class DatabaseUsers:
     """In-memory stand-in for the MySQL accounts under test."""
@@ -82,15 +85,25 @@ def new_password(length: int = 32) -> str:
 
 
 def rotate_password(store: SecretStore, database: DatabaseUsers, user: str) -> str:
-    """Run the four Secrets Manager rotation steps for a password user."""
+    """Run the four Secrets Manager rotation steps for a password user.
+
+    A failed test leaves AWSCURRENT unchanged and puts the database password
+    back to that version. The IAM user is never given a password.
+    """
 
     pending = new_password()
     store.put_pending(pending)
-    database.set_password(user, pending)
-    if not database.authenticate(user, pending, tls=True):
-        raise RotationError("new password failed over TLS")
-    if database.authenticate(user, pending, tls=False):
-        raise RotationError("database accepted a non-TLS login")
+    try:
+        database.set_password(user, pending)
+        if not database.authenticate(user, pending, tls=True):
+            raise RotationError("new password failed over TLS")
+        if database.authenticate(user, pending, tls=False):
+            raise RotationError("database accepted a non-TLS login")
+    except RotationError:
+        store.discard_pending()
+        if database.plugins.get(user) != "AWSAuthenticationPlugin":
+            database.passwords[user] = store.get("AWSCURRENT")
+        raise
     store.promote()
     return store.get("AWSCURRENT")
 
@@ -101,6 +114,32 @@ def issue_iam_token(user: str, *, now: datetime | None = None) -> str:
     moment = now or datetime.now(timezone.utc)
     expires = int((moment + IAM_TOKEN_LIFETIME).timestamp())
     return f"iam-token:{user}:{expires}"
+
+
+def iam_login_plan(user: str, hostname: str) -> dict:
+    """What an EC2 client must use. The plan contains no token and no password.
+
+    The real token is a SigV4 signature over rds.ap-south-1.amazonaws.com,
+    made locally from the instance role. It is not fetched from RDS or STS.
+    Reconnect with a new token before the 15 minute lifetime ends.
+    """
+
+    if user != "cloudcart_iam":
+        raise ValueError("IAM login is only for cloudcart_iam")
+    if not hostname or "://" in hostname or "@" in hostname:
+        raise ValueError("pass the database hostname, not a URL or a user")
+    return {
+        "user": user,
+        "hostname": hostname,
+        "port": 3306,
+        "region": "ap-south-1",
+        "signing_host": "rds.ap-south-1.amazonaws.com",
+        "ssl": True,
+        "verify_rds_certificate": True,
+        "token_lifetime_seconds": int(IAM_TOKEN_LIFETIME.total_seconds()),
+        "refresh_before_seconds": 60,
+        "credentials": "instance-role",
+    }
 
 
 def token_is_expired(issued_at: datetime, now: datetime, lifetime: timedelta = IAM_TOKEN_LIFETIME) -> bool:
