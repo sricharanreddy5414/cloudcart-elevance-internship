@@ -9,7 +9,9 @@ name: cloudcart-mysql-lab
 
 services:
   mysql:
-    image: mysql:8.0.40
+    # Index digest for the public tag mysql:8.0.40, read from Docker Hub on 19 November 2026.
+    # The image was not pulled or started in this environment.
+    image: mysql@sha256:d58ac93387f644e4e040c636b8f50494e78e5afc27ca0a87348b2f577da2b7ff
     restart: "no"
     env_file:
       - ../../../.env

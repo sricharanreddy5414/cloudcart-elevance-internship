@@ -1,6 +1,8 @@
 # CloudCart
 
-EverShop store for the Elevance Skills Cloud Technology internship. Six AWS tasks are designed in this repository. None of them has been deployed. Local tests are not AWS evidence.
+EverShop store for the Elevance Skills Cloud Technology internship. The internship asks for six AWS capabilities around one store: DNS and TLS, a private database, automatic capacity, immutable container delivery, a CloudFront edge, and private product images. This repository holds the design and the local tests. None of the six has been deployed. A local test is not AWS evidence.
+
+GitHub `main` was still `0535dcf` on 19 November 2026 (Asia/Calcutta). The later review commits are local until `git push github main` succeeds. Do not force-push.
 
 | | |
 | --- | --- |
@@ -26,6 +28,19 @@ The running store, when it is the original installation, stays on the Windows ma
 - Database: PostgreSQL 16, Docker volume `postgres-data`
 
 Do not copy this repository over the original store folder, and do not delete `postgres-data`. EverShop uses PostgreSQL. The MySQL design is a separate security lab.
+
+## Six tasks
+
+| Task | What it asks for | In this repository | Deployed |
+| --- | --- | --- | --- |
+| 1 | Domain, Route 53, ACM, WAF, failover | [Terraform and notes](docs/task-01-route53-acm-waf/README.md) | No |
+| 2 | Private Multi-AZ MySQL, IAM auth, rotation, recovery | [Separate from the store database](docs/task-02-secure-rds/README.md) | No |
+| 3 | Mixed Spot and On-Demand, scaling, failure tests | [Model, not EC2](docs/task-03-auto-scaling-chaos/README.md) | No |
+| 4 | EverShop on ECS, ECR, CodePipeline, blue/green | [Image file, not a built image](docs/task-04-ecs-ecr-cicd/README.md) | No |
+| 5 | Private S3 origin, CloudFront, Lambda@Edge | [Source, not a published function](docs/task-05-cloudfront-lambda-edge/README.md) | No |
+| 6 | Private images, lifecycle, inventory, scanning | [EICAR check, not ClamAV](docs/task-06-advanced-s3/README.md) | No |
+
+The store database is PostgreSQL. Task 2 does not replace it. Architecture: [docs/architecture/integrated-architecture.md](docs/architecture/integrated-architecture.md). Order, if a deployment is ever approved: [docs/reports/deployment-dependency-map.md](docs/reports/deployment-dependency-map.md).
 
 ## Current truth
 
@@ -78,6 +93,11 @@ Leave the existing store running. Do not run `docker compose down -v`, and do no
 - [Security design](docs/security/threat-model.md)
 - [Service availability](docs/limitations/aws-service-availability.md)
 - [Known blockers](docs/limitations/known-blockers.md)
+- [Blocker register](docs/reports/blocker-register.md)
+- [Deployment order](docs/reports/deployment-dependency-map.md)
+- [Test categories](docs/testing/test-categories.md)
+- [Container review](docs/security/container-review.md)
+- [Local run notes](docs/deployment/local.md)
 - [Evidence index](evidence/README.md)
 - [Zero-cost review](docs/reports/zero-cost-strategy.md)
 - [Viva preparation](docs/final-report/viva-preparation.md)
@@ -94,4 +114,4 @@ Security notes are in [docs/security/phase-2-review.md](docs/security/phase-2-re
 
 Learning recorded here: CloudFront certificates are regional, IAM database tokens and password rotation are different controls, and a backup retention period is not a measured recovery point.
 
-Known limits: no domain, no Docker in the last validation environment, Lambda@Edge is not associated, Object Lambda is unavailable to new customers, and the malware check is EICAR-only.
+Known limits: GitHub is behind the local commits, no domain, no Docker in the last validation environment, Lambda@Edge is not associated, Object Lambda is unavailable to new customers, and the malware check is EICAR-only. The open list is [the blocker register](docs/reports/blocker-register.md).

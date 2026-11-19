@@ -1,6 +1,6 @@
 # Known blockers
 
-Updated 19 November 2026 (Asia/Calcutta). These items were not bypassed.
+Updated 19 November 2026 (Asia/Calcutta). The fielded register is [docs/reports/blocker-register.md](../reports/blocker-register.md). This table is the short index. These items were not bypassed.
 
 | Blocker | Why it stops the work | Label |
 | --- | --- | --- |

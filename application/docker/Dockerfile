@@ -10,8 +10,13 @@ FROM evershop/evershop@${EVERSHOP_DIGEST}
 ENV NODE_ENV=production
 EXPOSE 3000
 
+# The published EverShop image is built FROM node:18-alpine and does not set USER.
+# /app is root-owned. USER node is not set here: it was not verified against a
+# built image, and EverShop writes runtime files during startup. Docker was
+# not available when this was reviewed. Do not treat the image as non-root.
+
 HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
-  CMD node -e "require('http').get('http://127.0.0.1:3000/',function(r){process.exit(r.statusCode<500?0:1)}).on('error',function(){process.exit(1)})"
+  CMD node -e "require('http').get('http://127.0.0.1:3000/',function(r){process.exit(r.statusCode>=200&&r.statusCode<400?0:1)}).on('error',function(){process.exit(1)})"
 
 # Media is not copied into the image. Product images belong in the private S3 bucket.
 # Database credentials are injected at run time by ECS, from Secrets Manager.

@@ -1,0 +1,23 @@
+# Build context is the repository root:
+#   docker build -f application/docker/Dockerfile -t cloudcart-evershop:local .
+# Docker reads this file only. application/docker/.dockerignore is not used for that command.
+# The Dockerfile does not COPY the context. These rules still stop secrets reaching the daemon.
+
+.git
+.github
+.env
+**/.env
+**/*.pem
+**/*.key
+**/*.pfx
+**/credentials
+**/.aws
+*.tfstate
+*.tfstate.*
+**/.terraform
+evidence
+node_modules
+**/node_modules
+__pycache__
+.venv
+*.log
