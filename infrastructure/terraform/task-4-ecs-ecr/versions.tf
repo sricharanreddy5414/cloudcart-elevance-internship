@@ -104,6 +104,12 @@ variable "db_password_secret_arn" {
   default     = "arn:aws:secretsmanager:ap-south-1:000000000000:secret:cloudcart/evershop/postgres"
 }
 
+variable "alb_certificate_arn" {
+  description = "Task 1 ACM certificate in ap-south-1. Empty omits the HTTPS listener so this stack does not invent a certificate."
+  type        = string
+  default     = ""
+}
+
 variable "production_listener_arn" {
   description = "HTTPS listener ARN. Replace the placeholder before an approved apply."
   type        = string

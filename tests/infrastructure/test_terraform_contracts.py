@@ -33,7 +33,14 @@ class TerraformContractTest(unittest.TestCase):
         self.assertIn("AWSManagedRulesCommonRuleSet", text)
         self.assertIn("redirect-to-https", text)
         self.assertIn("strict_transport_security", text)
+        self.assertIn("origin_group", text)
+        self.assertIn("aws_acm_certificate_validation", text)
+        self.assertIn("rate_based_statement", text)
+        self.assertIn("evaluate_target_health = false", text)
+        self.assertIn("https-only", text)
+        self.assertIn("AllowCloudFrontRead", text)
         self.assertNotIn("aws_route53domains_registered_domain", text)
+        self.assertNotIn("preload                    = true", text)
 
     def test_task_two_is_mysql_and_private(self):
         text = read_stack("task-2-secure-rds")
@@ -79,6 +86,9 @@ class TerraformContractTest(unittest.TestCase):
         self.assertIn("aws_s3_bucket_versioning", text)
         self.assertIn("referenced_security_group_id", text)
         self.assertIn("cloudcart-tasks", text)
+        self.assertIn("com.amazonaws.global.cloudfront.origin-facing", text)
+        self.assertIn("ELBSecurityPolicy-TLS13-1-2-2021-06", text)
+        self.assertIn("alb_certificate_arn", text)
 
     def test_task_five_uses_oac_and_a_private_origin(self):
         text = read_stack("task-5-cloudfront-edge")

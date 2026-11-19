@@ -67,10 +67,15 @@ resource "aws_iam_role_policy" "task" {
   policy = file("${path.module}/../../../security/iam/task-role-policy.json")
 }
 
+data "aws_ec2_managed_prefix_list" "cloudfront" {
+  count = module.guard.resource_count
+  name  = "com.amazonaws.global.cloudfront.origin-facing"
+}
+
 resource "aws_security_group" "alb" {
   count       = module.guard.resource_count
   name        = "cloudcart-alb"
-  description = "Public HTTP and HTTPS. Egress is only TCP 3000 to the task security group."
+  description = "HTTPS from CloudFront only. Egress is only TCP 3000 to the task security group."
   vpc_id      = var.vpc_id
 }
 
@@ -84,21 +89,21 @@ resource "aws_security_group" "tasks" {
 resource "aws_vpc_security_group_ingress_rule" "alb_http" {
   count             = module.guard.resource_count
   security_group_id = aws_security_group.alb[0].id
-  cidr_ipv4         = "0.0.0.0/0"
+  prefix_list_id    = data.aws_ec2_managed_prefix_list.cloudfront[0].id
   ip_protocol       = "tcp"
   from_port         = 80
   to_port           = 80
-  description       = "Public HTTP redirect"
+  description       = "HTTP redirect from CloudFront origin-facing addresses only"
 }
 
 resource "aws_vpc_security_group_ingress_rule" "alb_https" {
   count             = module.guard.resource_count
   security_group_id = aws_security_group.alb[0].id
-  cidr_ipv4         = "0.0.0.0/0"
+  prefix_list_id    = data.aws_ec2_managed_prefix_list.cloudfront[0].id
   ip_protocol       = "tcp"
   from_port         = 443
   to_port           = 443
-  description       = "Public HTTPS"
+  description       = "HTTPS from CloudFront origin-facing addresses only"
 }
 
 resource "aws_vpc_security_group_egress_rule" "alb_to_tasks" {
@@ -219,6 +224,27 @@ resource "aws_lb_listener" "http" {
       port        = "443"
       protocol    = "HTTPS"
       status_code = "HTTP_301"
+    }
+  }
+}
+
+resource "aws_lb_listener" "https" {
+  count             = module.guard.resource_count * (var.alb_certificate_arn == "" ? 0 : 1)
+  load_balancer_arn = aws_lb.app[0].arn
+  port              = 443
+  protocol          = "HTTPS"
+  ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06"
+  certificate_arn   = var.alb_certificate_arn
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.blue[0].arn
+  }
+
+  lifecycle {
+    precondition {
+      condition     = !strcontains(var.alb_certificate_arn, "000000000000")
+      error_message = "alb_certificate_arn must be the Task 1 regional certificate ARN. A zero account id is rejected."
     }
   }
 }

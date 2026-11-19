@@ -82,7 +82,7 @@ RDS deletion protection is enabled in Terraform, and a final snapshot is require
 | --- | --- | --- |
 | 0 Repository and identity | Inspected. Caller unknown. Cost recorded. | No |
 | 1 Public site | Only a static CloudFront site fits the monthly budget. EverShop needs compute and PostgreSQL, which do not. | Wait |
-| 2 Task 1 | Zone, two certificates, two WAF ACLs, health check, maintenance distribution. Blocked by domain ownership and by WAF's monthly price. | Wait |
+| 2 Task 1 | Zone, two certificates, two WAF ACLs, health check, one distribution with origin failover. Blocked by domain ownership and by WAF's monthly price. | Wait |
 | 3 Task 2 | Private Multi-AZ MySQL lab, separate from EverShop PostgreSQL. Five-minute RPO needs a measured restore, which creates another database. | Wait |
 | 4 Task 3 | Real Auto Scaling activity needs the EC2 capacity from Task 4. In-process tests are not AWS chaos tests. | Wait |
 | 5 Task 4 | ECR, ECS on EC2, ALB, Parameter Store, CodeBuild, CodePipeline. The ALB alone exceeds ₹500 for a month. | Wait |

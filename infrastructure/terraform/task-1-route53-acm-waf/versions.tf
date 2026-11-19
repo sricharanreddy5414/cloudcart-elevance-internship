@@ -40,21 +40,58 @@ variable "confirm_paid_deployment" {
 }
 
 variable "domain_name" {
-  description = "Domain you already control. This stack does not register a domain."
+  description = "Domain you already control. This stack does not register a domain. example.invalid is rejected when the paid gate is on."
   type        = string
   default     = "example.invalid"
+
+  validation {
+    condition     = can(regex("^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$", var.domain_name))
+    error_message = "domain_name must be a lowercase DNS name. This stack does not register a domain."
+  }
 }
 
-variable "storefront_cloudfront_domain" {
-  description = "Domain name of the Task 5 distribution. Required before an approved apply."
+variable "alb_dns_name" {
+  description = "Task 4 load balancer DNS name. The placeholder is rejected when the paid gate is on."
   type        = string
-  default     = "storefront.example.invalid"
+  default     = "alb.example.invalid"
 }
 
 variable "alb_arn" {
   description = "ALB ARN from Task 4. Empty skips the regional WAF association."
   type        = string
   default     = ""
+}
+
+variable "alb_https_listener_arn" {
+  description = "Task 4 HTTPS listener ARN. Empty skips attaching the regional certificate."
+  type        = string
+  default     = ""
+}
+
+variable "hsts_max_age_seconds" {
+  description = "Short on purpose. Preload is not enabled at any value."
+  type        = number
+  default     = 300
+
+  validation {
+    condition     = var.hsts_max_age_seconds >= 60 && var.hsts_max_age_seconds <= 300
+    error_message = "Keep HSTS at or below 300 seconds until the domain is deliberately submitted for preload."
+  }
+}
+
+variable "waf_rate_limit" {
+  description = "Requests per 5 minutes from one IP before the rate rule blocks. Shared NATs can trip this."
+  type        = number
+  default     = 2000
+
+  validation {
+    condition     = var.waf_rate_limit >= 100 && var.waf_rate_limit <= 20000000
+    error_message = "WAF rate limits must be between 100 and 20000000."
+  }
+}
+
+locals {
+  maintenance_bucket_name = trim(substr(replace("cloudcart-maint-${replace(var.domain_name, ".", "-")}", "_", "-"), 0, 63), "-")
 }
 
 module "guard" {
