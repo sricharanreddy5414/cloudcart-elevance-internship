@@ -1,5 +1,5 @@
 {
-  "family": "cloudcart",
+  "family": "cloudcart-evershop",
   "networkMode": "awsvpc",
   "requiresCompatibilities": ["EC2"],
   "cpu": "512",
@@ -12,11 +12,26 @@
       "image": "<IMAGE1_NAME>",
       "essential": true,
       "portMappings": [
-        {
-          "containerPort": 3000,
-          "protocol": "tcp"
+        { "containerPort": 3000, "protocol": "tcp" }
+      ],
+      "environment": [
+        { "name": "NODE_ENV", "value": "production" },
+        { "name": "DB_PORT", "value": "5432" },
+        { "name": "DB_NAME", "value": "postgres" },
+        { "name": "DB_USER", "value": "postgres" }
+      ],
+      "secrets": [
+        { "name": "DB_PASSWORD", "valueFrom": "<DB_SECRET_ARN>" },
+        { "name": "DB_HOST", "valueFrom": "<DB_HOST_PARAMETER>" }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "<LOG_GROUP>",
+          "awslogs-region": "ap-south-1",
+          "awslogs-stream-prefix": "evershop"
         }
-      ]
+      }
     }
   ]
 }

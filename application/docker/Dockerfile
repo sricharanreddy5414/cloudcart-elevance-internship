@@ -9,6 +9,10 @@ FROM evershop/evershop@${EVERSHOP_DIGEST}
 
 ENV NODE_ENV=production
 EXPOSE 3000
+STOPSIGNAL SIGTERM
+
+LABEL org.opencontainers.image.title="cloudcart-evershop" \
+      org.opencontainers.image.description="EverShop storefront. Credentials are not in this image."
 
 # The published EverShop image is built FROM node:18-alpine and does not set USER.
 # /app is root-owned. USER node is not set here: it was not verified against a

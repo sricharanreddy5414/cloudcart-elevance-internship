@@ -163,6 +163,38 @@ class TerraformContractTest(unittest.TestCase):
         self.assertIn("com.amazonaws.global.cloudfront.origin-facing", text)
         self.assertIn("ELBSecurityPolicy-TLS13-1-2-2021-06", text)
         self.assertIn("alb_certificate_arn", text)
+        self.assertIn('target_type = "ip"', text)
+        self.assertIn("imageCountMoreThan", text)
+        self.assertIn("ManualApproval", text)
+        self.assertRegex(text, r'status\s*=\s*"DISABLED"')
+        self.assertRegex(text, r'managed_termination_protection\s*=\s*"DISABLED"')
+        self.assertIn("schema_version", text)
+        self.assertIn("5432", text)
+        self.assertNotIn("3306", text)
+        self.assertNotIn("AWSCodeDeployRoleForECS", text)
+        self.assertIn("PassTaskRoles", text)
+        self.assertIn("@sha256", text)
+
+    def test_task_four_rejects_a_mutable_image_tag(self):
+        binary = shutil.which("terraform") or str(Path.home() / ".local" / "bin" / "terraform")
+        if not Path(binary).exists():
+            self.skipTest("terraform is not installed")
+        result = subprocess.run(
+            [
+                binary,
+                "plan",
+                "-input=false",
+                "-lock=false",
+                "-var=image_uri=000000000000.dkr.ecr.ap-south-1.amazonaws.com/cloudcart:latest",
+            ],
+            cwd=TF / "task-4-ecs-ecr",
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        combined = result.stdout + result.stderr
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("image_uri", combined)
 
     def test_task_five_uses_oac_and_a_private_origin(self):
         text = read_stack("task-5-cloudfront-edge")

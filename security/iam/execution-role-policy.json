@@ -31,6 +31,12 @@
       "Effect": "Allow",
       "Action": ["ssm:GetParameters"],
       "Resource": "arn:aws:ssm:ap-south-1:*:parameter/cloudcart/*"
+    },
+    {
+      "Sid": "InjectEverShopSecret",
+      "Effect": "Allow",
+      "Action": ["secretsmanager:GetSecretValue"],
+      "Resource": "arn:aws:secretsmanager:ap-south-1:*:secret:cloudcart/evershop/*"
     }
   ]
 }

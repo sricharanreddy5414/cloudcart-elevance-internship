@@ -12,4 +12,4 @@ docker build -f application/docker/Dockerfile -t cloudcart-evershop:local .
 
 That command does not start a container and does not attach `postgres-data`.
 
-The upstream image does not set `USER`. This Dockerfile does not add one. A non-root user has not been verified against a running container.
+The upstream image does not set `USER`. This Dockerfile does not add one. A non-root user has not been verified against a running container. `STOPSIGNAL SIGTERM` is set so ECS can stop the process without a second kill. That signal path has not been observed in a running container.

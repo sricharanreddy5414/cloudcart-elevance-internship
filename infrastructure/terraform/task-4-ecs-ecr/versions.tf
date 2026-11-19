@@ -93,9 +93,42 @@ variable "private_subnet_ids" {
 }
 
 variable "image_uri" {
-  description = "ECR image digest. The zero digest is a placeholder and must be replaced before deployment."
+  description = "ECR image digest. A mutable tag is rejected. The zero digest is still rejected by the apply precondition."
   type        = string
   default     = "000000000000.dkr.ecr.ap-south-1.amazonaws.com/cloudcart@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+
+  validation {
+    condition     = can(regex("@sha256:[0-9a-f]{64}$", var.image_uri)) && !strcontains(var.image_uri, ":latest")
+    error_message = "image_uri must be an immutable @sha256 digest. A latest tag is rejected."
+  }
+}
+
+variable "desired_count" {
+  type        = number
+  default     = 2
+  description = "Tasks to run. Two matches the Task 3 minimum so one host can be lost."
+
+  validation {
+    condition     = var.desired_count >= 2 && var.desired_count <= 4
+    error_message = "desired_count must be from 2 to 4."
+  }
+}
+
+variable "autoscaling_group_arn" {
+  type        = string
+  default     = ""
+  description = "Task 3 Auto Scaling group ARN. Empty keeps launch_type EC2. When set, managed scaling and managed termination protection stay off so they do not fight the Task 3 hooks."
+}
+
+variable "expected_schema_version" {
+  type        = string
+  default     = "0"
+  description = "Value published for the Task 3 launch hook. The hook compares it and does not migrate."
+
+  validation {
+    condition     = can(regex("^[A-Za-z0-9._-]{1,32}$", var.expected_schema_version))
+    error_message = "expected_schema_version must be a short token."
+  }
 }
 
 variable "db_password_secret_arn" {

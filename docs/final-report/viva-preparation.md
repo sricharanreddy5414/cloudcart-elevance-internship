@@ -36,7 +36,7 @@ IMDSv2 is required on the launch template.
 
 ## Task 4
 
-The Dockerfile and Compose file pin an image digest. ECR tag mutability is `IMMUTABLE`. ECS launch type is `EC2`, and the deployment controller is `CODE_DEPLOY` with two target groups. CodeBuild trusts `codebuild.amazonaws.com`, not the task execution role. CodePipeline has source, build, and CodeDeploy stages. Blue/green rollback in `cloudcart/deploy.py` is a simulation.
+The Dockerfile and Compose file pin an image digest. ECR tag mutability is `IMMUTABLE`. ECS launch type is `EC2` until a Task 3 group ARN is supplied, and the deployment controller is `CODE_DEPLOY` with two IP target groups. CodeBuild trusts `codebuild.amazonaws.com`, not the task execution role. CodePipeline has source, build, a manual approval, and then CodeDeploy. It does not start on every commit. Blue/green rollback in `cloudcart/deploy.py` is a simulation. The container still runs as root because `USER` was not verified.
 
 The image was not built here. Docker was missing. The artifact bucket name is no longer the zero account id. A paid apply builds `cloudcart-pipeline-<account-id>-<region>` or uses `artifact_bucket_name`. That apply has not been run.
 

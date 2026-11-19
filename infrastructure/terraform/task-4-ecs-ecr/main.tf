@@ -16,9 +16,54 @@ resource "aws_ecr_repository" "app" {
   }
 }
 
+resource "aws_ecr_lifecycle_policy" "app" {
+  count      = module.guard.resource_count
+  repository = aws_ecr_repository.app[0].name
+
+  policy = jsonencode({
+    rules = [{
+      rulePriority = 1
+      description  = "Keep the ten newest images so a rollback digest is still in the repository."
+      selection = {
+        tagStatus   = "any"
+        countType   = "imageCountMoreThan"
+        countNumber = 10
+      }
+      action = { type = "expire" }
+    }]
+  })
+}
+
 resource "aws_ecs_cluster" "this" {
   count = module.guard.resource_count
   name  = "cloudcart"
+}
+
+resource "aws_ecs_capacity_provider" "hosts" {
+  count = module.guard.resource_count * (var.autoscaling_group_arn == "" ? 0 : 1)
+  name  = "cloudcart-ec2"
+
+  auto_scaling_group_provider {
+    auto_scaling_group_arn         = var.autoscaling_group_arn
+    managed_termination_protection = "DISABLED"
+
+    managed_scaling {
+      status = "DISABLED"
+    }
+  }
+
+  lifecycle {
+    precondition {
+      condition     = !strcontains(var.autoscaling_group_arn, "000000000000")
+      error_message = "autoscaling_group_arn must be the Task 3 group. A zero account id is rejected."
+    }
+  }
+}
+
+resource "aws_ecs_cluster_capacity_providers" "hosts" {
+  count              = module.guard.resource_count * (var.autoscaling_group_arn == "" ? 0 : 1)
+  cluster_name       = aws_ecs_cluster.this[0].name
+  capacity_providers = [aws_ecs_capacity_provider.hosts[0].name]
 }
 
 resource "aws_cloudwatch_log_group" "app" {
@@ -79,6 +124,33 @@ resource "aws_security_group" "alb" {
   vpc_id      = var.vpc_id
 }
 
+resource "aws_security_group" "instances" {
+  count       = module.guard.resource_count
+  name        = "cloudcart-ecs-hosts"
+  description = "ECS container hosts from Task 3. No inbound SSH. Tasks use a separate group."
+  vpc_id      = var.vpc_id
+}
+
+resource "aws_vpc_security_group_egress_rule" "instances_https" {
+  count             = module.guard.resource_count
+  security_group_id = aws_security_group.instances[0].id
+  cidr_ipv4         = "0.0.0.0/0"
+  ip_protocol       = "tcp"
+  from_port         = 443
+  to_port           = 443
+  description       = "HTTPS for the ECS agent, ECR, and the lifecycle hook. This stack has no interface endpoints."
+}
+
+resource "aws_vpc_security_group_egress_rule" "instances_dns" {
+  count             = module.guard.resource_count
+  security_group_id = aws_security_group.instances[0].id
+  cidr_ipv4         = local.task_dns_cidr
+  ip_protocol       = "udp"
+  from_port         = 53
+  to_port           = 53
+  description       = "DNS for the container host."
+}
+
 resource "aws_security_group" "tasks" {
   count       = module.guard.resource_count
   name        = "cloudcart-tasks"
@@ -94,6 +166,16 @@ resource "aws_vpc_security_group_ingress_rule" "alb_http" {
   from_port         = 80
   to_port           = 80
   description       = "HTTP redirect from CloudFront origin-facing addresses only"
+}
+
+resource "aws_vpc_security_group_ingress_rule" "alb_test" {
+  count             = module.guard.resource_count
+  security_group_id = aws_security_group.alb[0].id
+  prefix_list_id    = data.aws_ec2_managed_prefix_list.cloudfront[0].id
+  ip_protocol       = "tcp"
+  from_port         = 8443
+  to_port           = 8443
+  description       = "CodeDeploy test traffic from CloudFront origin-facing addresses only"
 }
 
 resource "aws_vpc_security_group_ingress_rule" "alb_https" {
@@ -173,6 +255,12 @@ resource "aws_lb" "app" {
   internal           = false
   security_groups    = [aws_security_group.alb[0].id]
   subnets            = var.public_subnet_ids
+  depends_on         = [aws_s3_bucket_policy.alb_logs]
+
+  access_logs {
+    bucket  = aws_s3_bucket.alb_logs[0].bucket
+    enabled = true
+  }
 }
 
 resource "aws_lb_target_group" "blue" {
@@ -209,6 +297,8 @@ resource "aws_lb_target_group" "green" {
     healthy_threshold   = 2
     unhealthy_threshold = 3
   }
+
+  deregistration_delay = 30
 }
 
 resource "aws_lb_listener" "http" {
@@ -225,6 +315,20 @@ resource "aws_lb_listener" "http" {
       protocol    = "HTTPS"
       status_code = "HTTP_301"
     }
+  }
+}
+
+resource "aws_lb_listener" "test" {
+  count             = module.guard.resource_count * (var.alb_certificate_arn == "" ? 0 : 1)
+  load_balancer_arn = aws_lb.app[0].arn
+  port              = 8443
+  protocol          = "HTTPS"
+  ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06"
+  certificate_arn   = var.alb_certificate_arn
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.green[0].arn
   }
 }
 
@@ -273,10 +377,16 @@ resource "aws_ecs_task_definition" "app" {
       { name = "DB_NAME", value = "postgres" },
       { name = "DB_USER", value = "postgres" },
     ]
-    secrets = [{
-      name      = "DB_PASSWORD"
-      valueFrom = var.db_password_secret_arn
-    }]
+    secrets = [
+      {
+        name      = "DB_PASSWORD"
+        valueFrom = var.db_password_secret_arn
+      },
+      {
+        name      = "DB_HOST"
+        valueFrom = aws_ssm_parameter.db_host[0].arn
+      },
+    ]
     logConfiguration = {
       logDriver = "awslogs"
       options = {
@@ -289,19 +399,29 @@ resource "aws_ecs_task_definition" "app" {
 
   lifecycle {
     precondition {
-      condition     = !strcontains(var.image_uri, "000000000000")
-      error_message = "Replace image_uri with the real ECR digest before an approved apply."
+      condition     = !strcontains(var.image_uri, "000000000000") && !strcontains(var.db_password_secret_arn, "000000000000")
+      error_message = "Replace image_uri and db_password_secret_arn before an approved apply. The zero account id is rejected."
     }
   }
 }
 
 resource "aws_ecs_service" "app" {
-  count           = module.guard.resource_count
-  name            = "evershop"
-  cluster         = aws_ecs_cluster.this[0].id
-  task_definition = aws_ecs_task_definition.app[0].arn
-  desired_count   = 2
-  launch_type     = "EC2"
+  count                             = module.guard.resource_count
+  name                              = "evershop"
+  cluster                           = aws_ecs_cluster.this[0].id
+  task_definition                   = aws_ecs_task_definition.app[0].arn
+  desired_count                     = var.desired_count
+  launch_type                       = var.autoscaling_group_arn == "" ? "EC2" : null
+  health_check_grace_period_seconds = 120
+
+  dynamic "capacity_provider_strategy" {
+    for_each = var.autoscaling_group_arn == "" ? [] : [1]
+    content {
+      capacity_provider = aws_ecs_capacity_provider.hosts[0].name
+      weight            = 1
+      base              = 0
+    }
+  }
 
   deployment_controller {
     type = "CODE_DEPLOY"
@@ -337,10 +457,66 @@ resource "aws_iam_role" "codedeploy" {
   })
 }
 
-resource "aws_iam_role_policy_attachment" "codedeploy" {
-  count      = module.guard.resource_count
-  role       = aws_iam_role.codedeploy[0].name
-  policy_arn = "arn:aws:iam::aws:policy/AWSCodeDeployRoleForECS"
+resource "aws_iam_role_policy" "codedeploy" {
+  count = module.guard.resource_count
+  name  = "codedeploy"
+  role  = aws_iam_role.codedeploy[0].id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "EcsBlueGreen"
+        Effect = "Allow"
+        Action = [
+          "ecs:DescribeServices",
+          "ecs:CreateTaskSet",
+          "ecs:UpdateServicePrimaryTaskSet",
+          "ecs:DeleteTaskSet",
+        ]
+        Resource = [
+          aws_ecs_cluster.this[0].arn,
+          "arn:aws:ecs:${var.aws_region}:*:service/cloudcart/evershop",
+          "arn:aws:ecs:${var.aws_region}:*:task-set/cloudcart/evershop/*",
+          "arn:aws:ecs:${var.aws_region}:*:task-definition/cloudcart-evershop:*",
+        ]
+      },
+      {
+        Sid      = "PassTaskRoles"
+        Effect   = "Allow"
+        Action   = "iam:PassRole"
+        Resource = [aws_iam_role.execution[0].arn, aws_iam_role.task[0].arn]
+        Condition = {
+          StringEquals = { "iam:PassedToService" = "ecs-tasks.amazonaws.com" }
+        }
+      },
+      {
+        Sid    = "DescribeLoadBalancer"
+        Effect = "Allow"
+        Action = [
+          "elasticloadbalancing:DescribeTargetGroups",
+          "elasticloadbalancing:DescribeListeners",
+          "elasticloadbalancing:DescribeRules",
+        ]
+        Resource = "*"
+      },
+      {
+        Sid    = "ShiftTraffic"
+        Effect = "Allow"
+        Action = [
+          "elasticloadbalancing:ModifyListener",
+          "elasticloadbalancing:ModifyRule",
+        ]
+        Resource = "*"
+      },
+      {
+        Sid      = "ReadDeploymentArtifact"
+        Effect   = "Allow"
+        Action   = ["s3:GetObject", "s3:GetObjectVersion"]
+        Resource = "${aws_s3_bucket.pipeline_artifacts[0].arn}/*"
+      }
+    ]
+  })
 }
 
 resource "aws_codedeploy_app" "ecs" {
@@ -350,7 +526,7 @@ resource "aws_codedeploy_app" "ecs" {
 }
 
 resource "aws_codedeploy_deployment_group" "ecs" {
-  count                  = module.guard.resource_count
+  count                  = module.guard.resource_count * (var.alb_certificate_arn == "" ? 0 : 1)
   app_name               = aws_codedeploy_app.ecs[0].name
   deployment_group_name  = "cloudcart"
   service_role_arn       = aws_iam_role.codedeploy[0].arn
@@ -384,19 +560,19 @@ resource "aws_codedeploy_deployment_group" "ecs" {
 
   lifecycle {
     precondition {
-      condition     = !strcontains(var.production_listener_arn, "000000000000") && !strcontains(var.test_listener_arn, "000000000000")
-      error_message = "Replace the listener ARNs before an approved apply. The zero account id is rejected."
+      condition     = !strcontains(var.alb_certificate_arn, "000000000000")
+      error_message = "alb_certificate_arn must be the Task 1 certificate in ap-south-1. A zero account id is rejected."
     }
   }
 
   load_balancer_info {
     target_group_pair_info {
       prod_traffic_route {
-        listener_arns = [var.production_listener_arn]
+        listener_arns = [aws_lb_listener.https[0].arn]
       }
 
       test_traffic_route {
-        listener_arns = [var.test_listener_arn]
+        listener_arns = [aws_lb_listener.test[0].arn]
       }
 
       target_group {
@@ -641,9 +817,19 @@ resource "aws_iam_role_policy" "codepipeline" {
         Resource = aws_codebuild_project.app[0].arn
       },
       {
-        Effect   = "Allow"
-        Action   = ["codedeploy:CreateDeployment", "codedeploy:GetDeployment", "codedeploy:GetApplicationRevision", "codedeploy:RegisterApplicationRevision"]
-        Resource = "*"
+        Effect = "Allow"
+        Action = [
+          "codedeploy:CreateDeployment",
+          "codedeploy:GetDeployment",
+          "codedeploy:GetApplicationRevision",
+          "codedeploy:RegisterApplicationRevision",
+          "codedeploy:GetDeploymentConfig",
+        ]
+        Resource = [
+          "arn:aws:codedeploy:${var.aws_region}:*:application:cloudcart",
+          "arn:aws:codedeploy:${var.aws_region}:*:deploymentgroup:cloudcart/cloudcart",
+          "arn:aws:codedeploy:${var.aws_region}:*:deploymentconfig:CodeDeployDefault.ECSAllAtOnce",
+        ]
       },
       {
         Effect   = "Allow"
@@ -655,7 +841,7 @@ resource "aws_iam_role_policy" "codepipeline" {
 }
 
 resource "aws_codepipeline" "app" {
-  count    = module.guard.resource_count
+  count    = module.guard.resource_count * (var.alb_certificate_arn == "" ? 0 : 1)
   name     = "cloudcart"
   role_arn = aws_iam_role.codepipeline[0].arn
 
@@ -706,6 +892,17 @@ resource "aws_codepipeline" "app" {
   }
 
   stage {
+    name = "Approve"
+    action {
+      name     = "ManualApproval"
+      category = "Approval"
+      owner    = "AWS"
+      provider = "Manual"
+      version  = "1"
+    }
+  }
+
+  stage {
     name = "Deploy"
     action {
       name            = "CodeDeploy"
@@ -742,10 +939,200 @@ resource "aws_codebuild_project" "app" {
     image           = "aws/codebuild/standard:7.0"
     type            = "LINUX_CONTAINER"
     privileged_mode = true
+
+    environment_variable {
+      name  = "ECR_REPOSITORY"
+      value = aws_ecr_repository.app[0].name
+    }
+
+    environment_variable {
+      name  = "EXECUTION_ROLE_ARN"
+      value = aws_iam_role.execution[0].arn
+    }
+
+    environment_variable {
+      name  = "TASK_ROLE_ARN"
+      value = aws_iam_role.task[0].arn
+    }
+
+    environment_variable {
+      name  = "DB_SECRET_ARN"
+      value = var.db_password_secret_arn
+    }
+
+    environment_variable {
+      name  = "DB_HOST_PARAMETER"
+      value = aws_ssm_parameter.db_host[0].arn
+    }
+
+    environment_variable {
+      name  = "LOG_GROUP"
+      value = aws_cloudwatch_log_group.app[0].name
+    }
   }
 
   source {
     type      = "CODEPIPELINE"
     buildspec = file("${path.module}/../../../ci-cd/codebuild/buildspec.yml")
   }
+}
+
+resource "aws_ecr_repository_policy" "app" {
+  count      = module.guard.resource_count
+  repository = aws_ecr_repository.app[0].name
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Sid    = "ProjectRolesOnly"
+      Effect = "Allow"
+      Principal = {
+        AWS = [
+          aws_iam_role.execution[0].arn,
+          aws_iam_role.codebuild[0].arn,
+        ]
+      }
+      Action = [
+        "ecr:BatchCheckLayerAvailability",
+        "ecr:BatchGetImage",
+        "ecr:GetDownloadUrlForLayer",
+        "ecr:PutImage",
+        "ecr:InitiateLayerUpload",
+        "ecr:UploadLayerPart",
+        "ecr:CompleteLayerUpload",
+      ]
+    }]
+  })
+}
+
+resource "aws_ssm_parameter" "schema_version" {
+  count = module.guard.resource_count
+  name  = "/cloudcart/production/schema_version"
+  type  = "String"
+  value = var.expected_schema_version
+}
+
+resource "aws_s3_bucket" "alb_logs" {
+  count         = module.guard.resource_count
+  bucket_prefix = "cloudcart-alb-logs-"
+  force_destroy = false
+}
+
+resource "aws_s3_bucket_public_access_block" "alb_logs" {
+  count                   = module.guard.resource_count
+  bucket                  = aws_s3_bucket.alb_logs[0].id
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket_ownership_controls" "alb_logs" {
+  count  = module.guard.resource_count
+  bucket = aws_s3_bucket.alb_logs[0].id
+
+  rule {
+    object_ownership = "BucketOwnerEnforced"
+  }
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "alb_logs" {
+  count  = module.guard.resource_count
+  bucket = aws_s3_bucket.alb_logs[0].id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
+resource "aws_s3_bucket_lifecycle_configuration" "alb_logs" {
+  count  = module.guard.resource_count
+  bucket = aws_s3_bucket.alb_logs[0].id
+
+  rule {
+    id     = "expire-access-logs"
+    status = "Enabled"
+
+    expiration {
+      days = 14
+    }
+  }
+}
+
+resource "aws_s3_bucket_policy" "alb_logs" {
+  count  = module.guard.resource_count
+  bucket = aws_s3_bucket.alb_logs[0].id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid       = "DenyInsecureTransport"
+        Effect    = "Deny"
+        Principal = "*"
+        Action    = "s3:*"
+        Resource = [
+          aws_s3_bucket.alb_logs[0].arn,
+          "${aws_s3_bucket.alb_logs[0].arn}/*",
+        ]
+        Condition = { Bool = { "aws:SecureTransport" = "false" } }
+      },
+      {
+        Sid       = "AllowLoadBalancerWrite"
+        Effect    = "Allow"
+        Principal = { Service = "logdelivery.elasticloadbalancing.amazonaws.com" }
+        Action    = "s3:PutObject"
+        Resource  = "${aws_s3_bucket.alb_logs[0].arn}/*"
+      }
+    ]
+  })
+
+  depends_on = [aws_s3_bucket_public_access_block.alb_logs]
+}
+
+resource "aws_cloudwatch_metric_alarm" "task_cpu" {
+  count               = module.guard.resource_count
+  alarm_name          = "cloudcart-evershop-cpu"
+  alarm_description   = "EverShop task CPU stayed above 80 percent. No notification topic is attached."
+  namespace           = "AWS/ECS"
+  metric_name         = "CPUUtilization"
+  dimensions          = { ClusterName = aws_ecs_cluster.this[0].name, ServiceName = aws_ecs_service.app[0].name }
+  statistic           = "Average"
+  period              = 300
+  evaluation_periods  = 3
+  threshold           = 80
+  comparison_operator = "GreaterThanThreshold"
+  treat_missing_data  = "notBreaching"
+}
+
+resource "aws_cloudwatch_metric_alarm" "task_memory" {
+  count               = module.guard.resource_count
+  alarm_name          = "cloudcart-evershop-memory"
+  alarm_description   = "EverShop task memory stayed above 80 percent. No notification topic is attached."
+  namespace           = "AWS/ECS"
+  metric_name         = "MemoryUtilization"
+  dimensions          = { ClusterName = aws_ecs_cluster.this[0].name, ServiceName = aws_ecs_service.app[0].name }
+  statistic           = "Average"
+  period              = 300
+  evaluation_periods  = 3
+  threshold           = 80
+  comparison_operator = "GreaterThanThreshold"
+  treat_missing_data  = "notBreaching"
+}
+
+output "instance_security_group_id" {
+  description = "Pass this to Task 3 as app_security_group_id. It is the host group, not the task group."
+  value       = one(aws_security_group.instances[*].id)
+}
+
+output "ecr_repository_url" {
+  value = one(aws_ecr_repository.app[*].repository_url)
+}
+
+output "https_listener_arn" {
+  value = one(aws_lb_listener.https[*].arn)
+}
+
+output "test_listener_arn" {
+  value = one(aws_lb_listener.test[*].arn)
 }

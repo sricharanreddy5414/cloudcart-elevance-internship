@@ -40,6 +40,18 @@ class Release:
         return self.production
 
 
+def rollback_image(current: str, previous: str) -> str:
+    """Choose the previous digest. This does not call ECS."""
+
+    if not DIGEST.search(previous) or previous.endswith(ZERO_DIGEST):
+        raise ValueError("rollback image must be a real digest")
+    if ":latest" in previous:
+        raise ValueError("rollback image must not be a mutable tag")
+    if previous == current:
+        raise ValueError("rollback image is the image that just failed")
+    return previous
+
+
 def validate_task_definition(document: dict, *, allow_placeholders: bool = False) -> list[str]:
     errors: list[str] = []
     compat = document.get("requiresCompatibilities")
