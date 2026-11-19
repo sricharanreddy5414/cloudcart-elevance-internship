@@ -26,6 +26,13 @@ class PolicyTest(unittest.TestCase):
         self.assertNotIn("s3:PutObject", execution_actions)
         self.assertIn("ecr:GetAuthorizationToken", execution_actions)
         self.assertNotIn("rds-db:connect", execution_actions)
+        star = [item for item in execution["Statement"] if item["Resource"] == "*"]
+        self.assertEqual(star, [{
+            "Sid": "EcrAuthToken",
+            "Effect": "Allow",
+            "Action": ["ecr:GetAuthorizationToken"],
+            "Resource": "*",
+        }])
         statement = connect["Statement"][0]
         self.assertEqual(statement["Action"], ["rds-db:connect"])
         self.assertNotIn("*", statement["Resource"])

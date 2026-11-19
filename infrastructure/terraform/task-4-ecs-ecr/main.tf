@@ -335,9 +335,13 @@ resource "aws_iam_role_policy" "codebuild" {
         Resource = "*"
       },
       {
+        Effect   = "Allow"
+        Action   = ["ecr:GetAuthorizationToken"]
+        Resource = "*"
+      },
+      {
         Effect = "Allow"
         Action = [
-          "ecr:GetAuthorizationToken",
           "ecr:BatchCheckLayerAvailability",
           "ecr:GetDownloadUrlForLayer",
           "ecr:BatchGetImage",
@@ -347,7 +351,7 @@ resource "aws_iam_role_policy" "codebuild" {
           "ecr:CompleteLayerUpload",
           "ecr:StartImageScan"
         ]
-        Resource = "*"
+        Resource = aws_ecr_repository.app[0].arn
       },
       {
         Effect   = "Allow"

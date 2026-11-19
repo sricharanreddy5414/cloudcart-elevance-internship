@@ -81,4 +81,16 @@ Leave the existing store running. Do not run `docker compose down -v`, and do no
 - [Evidence index](evidence/README.md)
 - [Zero-cost review](docs/reports/zero-cost-strategy.md)
 - [Viva preparation](docs/final-report/viva-preparation.md)
+- [Phase 2 security review](docs/security/phase-2-review.md)
+- [Phase 2 cost by resource](docs/reports/phase-2-cost-by-resource.md)
 - [Submission checklist](docs/final-report/submission-checklist.md)
+
+## What an evaluator should trust
+
+Local tests and Terraform plans are in `evidence/test-results/`. They do not show a running AWS service. The task evidence folders are empty templates. There is no live URL.
+
+Security notes are in [docs/security/phase-2-review.md](docs/security/phase-2-review.md). Paid resources stay off until a named approval. Cleanup has not been required because nothing was created.
+
+Learning recorded here: CloudFront certificates are regional, IAM database tokens and password rotation are different controls, and a backup retention period is not a measured recovery point.
+
+Known limits: no domain, no Docker in the last validation environment, Lambda@Edge is not associated, Object Lambda is unavailable to new customers, and the malware check is EICAR-only.

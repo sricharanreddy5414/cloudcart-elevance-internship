@@ -2,7 +2,7 @@
 
 No AWS resource has been created for CloudCart. Each Terraform stack defaults `confirm_paid_deployment` to false. `terraform plan` for all six stacks reported no changes on 17 November 2026.
 
-The ₹500 monthly target is priced in [docs/reports/phase-0-cost-and-deployment-plan.md](../reports/phase-0-cost-and-deployment-plan.md). A month of the required services is about ₹12,000 with GST. No apply is approved.
+The current target is ₹0. The earlier ₹500 comparison is in [the phase 0 plan](reports/phase-0-cost-and-deployment-plan.md). A month of the required services is about ₹12,000 with GST. No apply is approved.
 
 `scripts/terraform-apply.ps1` exits with an error unless two switches are passed, and it still refuses after those switches. An approved apply has to be a separate command that names one stack.
 

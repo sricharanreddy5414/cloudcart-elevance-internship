@@ -1,15 +1,55 @@
 # Viva preparation
 
-Say this, and do not add a deployment that has not happened.
+Nothing below has been deployed. If a question asks for a live result, say the check was local or not run.
 
-CloudCart is an EverShop store. The store database is PostgreSQL. Task 2 is a separate MySQL security lab because the brief asks for MySQL and EverShop does not run on MySQL. The two are not connected. The Windows volume `postgres-data` is the original store data and is not deleted by this repository.
+## Shared answers
 
-The Terraform stacks describe Route 53, ACM, WAF, MySQL, Auto Scaling, ECS on EC2, CloudFront, and S3. `confirm_paid_deployment` defaults to false, so a plan adds nothing. No stack has been applied. There is no live URL.
+EverShop uses PostgreSQL. Task 2 is a separate MySQL lab because the brief names MySQL and EverShop does not run on it. The Windows volume `postgres-data` is not part of either Terraform stack.
 
-Local tests cover HSTS and redirect rules, presigned URL expiry, EICAR quarantine, a Pillow WebP thumbnail, query filtering, signed-URL expiry, a simulated IAM token, a simulated rotation, a simulated five-minute RPO flag that stays false, in-process scaling, and a simulated blue/green rollback. Those results are LOCALLY VALIDATED. They are not AWS DEPLOYED.
+`confirm_paid_deployment` defaults to false. A plan adds no resources. There is no live URL and no AWS evidence folder with console output.
 
-S3 Object Lambda has been closed to new customers since 7 November 2025. The thumbnail file is an ordinary object. It does not meet the Object Lambda requirement. The scanner matches the EICAR test string and does not include a ClamAV database.
+The target is ₹0. The required services are not free. A month of the design is about ₹12,000 with GST. Current project spend is zero because nothing was created.
 
-If asked for the cost, say the target is ₹0 and the required services are not free. WAF, a domain, Multi-AZ RDS, an ALB, and public IPv4 addresses bill. A month of the combined design is about ₹12,000 with GST. Nothing has been created, so the current AWS charge from this project is zero.
+## Task 1
 
-The portal submission is done by the intern, not by this repository.
+Route 53 is the DNS control the brief names. Two ACM certificates exist because CloudFront accepts only an issued certificate from `us-east-1`, while the ALB certificate must be in `ap-south-1`. HSTS is a CloudFront response-headers policy with a short max-age and no preload. Failover is a primary and secondary alias plus a health check. WAF is two web ACLs, one `CLOUDFRONT` and one `REGIONAL`, each with `AWSManagedRulesCommonRuleSet`.
+
+A `*.cloudfront.net` name does not meet the custom-domain row. No domain is registered. Failover timing is a local TTL test, not a live DNS change.
+
+Likely question: why two web ACLs? A CloudFront ACL and a regional ACL are different objects and cannot be shared.
+
+## Task 2
+
+The instance is Multi-AZ, not publicly accessible, in private subnets, with `require_secure_transport` and IAM authentication enabled. The master password is a Secrets Manager-managed secret. The IAM user and the password user are different. An IAM token lasts 15 minutes. Rotation of the password user is simulated in `cloudcart/db.py`.
+
+Backup retention is 7 days. That configures point-in-time recovery. It does not measure a five-minute RPO. `verified_against_rds` is false. A real test reads `LatestRestorableTime` and, if a restore is approved, times a new instance.
+
+The private route table has no NAT. An EC2 client in those subnets cannot call STS until an endpoint or another approved path exists. Do not describe the local token function as an EC2 login.
+
+## Task 3
+
+The group asks for one On-Demand instance and Spot above that, across `t3.micro` and `t3.small`. The launch hook uses `ABANDON`, so a failed warm-up does not enter service. User data checks a schema version instead of running a migration on every instance. Scaling policies target CPU at 60 percent and ALB request count.
+
+The chaos tests remove a zone inside a Python model. They do not terminate EC2 or drain an ALB. There is no load-generator result. Do not say the store had no downtime.
+
+IMDSv2 is required on the launch template.
+
+## Task 4
+
+The Dockerfile and Compose file pin an image digest. ECR tag mutability is `IMMUTABLE`. ECS launch type is `EC2`, and the deployment controller is `CODE_DEPLOY` with two target groups. CodeBuild trusts `codebuild.amazonaws.com`, not the task execution role. CodePipeline has source, build, and CodeDeploy stages. Blue/green rollback in `cloudcart/deploy.py` is a simulation.
+
+The image was not built here. Docker was missing. The artifact bucket name is a placeholder and must be changed before apply.
+
+## Task 5
+
+The distribution uses Origin Access Control and does not grant public-read. Image cache keys allow only `w`, `h`, `format`, and `q`. The Node functions filter other query parameters, set cache headers, refuse a WebP body over 1 MB, and reject a signed URL after expiry.
+
+Those functions are not published in `us-east-1` and are not associated with the distribution. A cache-hit ratio has not been read from CloudFront. One local request is not a hit ratio.
+
+## Task 6
+
+The bucket blocks public access, enforces bucket owner, encrypts with AES256, denies non-TLS, and allows CloudFront to read only `public/*`. Lifecycle moves `public/` to Intelligent-Tiering at 30 days and Glacier at 90 days. Inventory is weekly to a second private bucket. Presigned URLs in tests expire within 300 seconds and use a local endpoint.
+
+S3 Object Lambda is closed to new customers. The Pillow thumbnail is an ordinary object and does not satisfy that requirement. The scanner matches the EICAR test string and has no ClamAV database. Do not call either one the required service.
+
+Glacier's minimum storage duration can cost more than leaving a lab object in Standard. Do not apply that transition for a short test without a separate approval.

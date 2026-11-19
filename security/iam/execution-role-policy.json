@@ -2,15 +2,20 @@
   "Version": "2012-10-17",
   "Statement": [
     {
-      "Sid": "PullImage",
+      "Sid": "EcrAuthToken",
+      "Effect": "Allow",
+      "Action": ["ecr:GetAuthorizationToken"],
+      "Resource": "*"
+    },
+    {
+      "Sid": "PullCloudCartImage",
       "Effect": "Allow",
       "Action": [
-        "ecr:GetAuthorizationToken",
         "ecr:BatchCheckLayerAvailability",
         "ecr:GetDownloadUrlForLayer",
         "ecr:BatchGetImage"
       ],
-      "Resource": "*"
+      "Resource": "arn:aws:ecr:ap-south-1:*:repository/cloudcart"
     },
     {
       "Sid": "WriteLogs",
